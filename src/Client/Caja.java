@@ -20,4 +20,20 @@ public class Caja extends Cliente {
 		//Cosas
 		return caja;
 	}
+	
+	public void consultarCarrito(ArrayList<Item> caja) {
+		int total = 0;
+		for (Item elemento : caja) {
+		    System.out.println(elemento.getNombre());
+		    System.out.println(elemento.getCantidad());
+		    System.out.println(elemento.precioTotal());
+		    total += elemento.precioTotal();
+		}
+	}
+	
+	public void finalizarVenta() {
+		//Guardar boleta o que se yo
+		System.out.println("Gacias por comprar!");
+	}
+	
 }

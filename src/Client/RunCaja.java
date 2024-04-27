@@ -67,10 +67,12 @@ public class RunCaja {
 					
 				case 4:
 					
+					caja.consultarCarrito(carrito);
 					break;
 				
 				case 5:
-					
+					caja.finalizarVenta();
+					carrito = new ArrayList<>();
 					break;
 					
 				case 6:
