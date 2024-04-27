@@ -1,0 +1,102 @@
+{
+    "1": {
+        "productName": "Papas fritas Lay's corte americano bolsa 350 g",
+        "commertialOffer": {
+            "price": 2138,
+            "priceWithoutDiscount": 3290,
+            "discountValue": 32,
+            "packPrice": 0,
+            "quantity": 0
+        }
+    },
+    "2": {
+        "productName": "Pasta spaghetti N°5 Carozzi 400 g",
+        "commertialOffer": {
+            "price": 1230,
+            "priceWithoutDiscount": 1230,
+            "discountValue": 0,
+            "packPrice": 0,
+            "quantity": 0
+        }
+    },
+    "3": {
+        "productName": "Salsa de tomate Pomarola italiana 200 g",
+        "commertialOffer": {
+            "price": 850,
+            "priceWithoutDiscount": 850,
+            "discountValue": 0,
+            "packPrice": 1190,
+            "quantity": 2
+        }
+    },
+    "4": {
+        "productName": "Doritos Evercrisp sabor queso 200 g",
+        "commertialOffer": {
+            "price": 2080,
+            "priceWithoutDiscount": 2080,
+            "discountValue": 0,
+            "packPrice": 0,
+            "quantity": 0
+        }
+    },
+    "5": {
+        "productName": "Agua saborizada Más granada 1.6 L",
+        "commertialOffer": {
+            "price": 1200,
+            "priceWithoutDiscount": 1200,
+            "discountValue": 0,
+            "packPrice": 1990,
+            "quantity": 2
+        }
+    },
+    "6": {
+        "productName": "Café Cruzeiro liofilizado frasco 170 g",
+        "commertialOffer": {
+            "price": 4830,
+            "priceWithoutDiscount": 6890,
+            "discountValue": 30,
+            "packPrice": 0,
+            "quantity": 0
+        }
+    },
+    "7": {
+        "productName": "Chocolate Trencito Nestlé de leche 150 g",
+        "commertialOffer": {
+            "price": 2490,
+            "priceWithoutDiscount": 2490,
+            "discountValue": 0,
+            "packPrice": 3340,
+            "quantity": 2
+        }
+    },
+    "8": {
+        "productName": "Pack Cerveza Corona Extra botella 12 un de 330 cc",
+        "commertialOffer": {
+            "price": 8990,
+            "priceWithoutDiscount": 14990,
+            "discountValue": 40,
+            "packPrice": 0,
+            "quantity": 0
+        }
+    },
+    "9": {
+        "productName": "Maní salado Marco Polo 400 g",
+        "commertialOffer": {
+            "price": 2880,
+            "priceWithoutDiscount": 2880,
+            "discountValue": 0,
+            "packPrice": 0,
+            "quantity": 0
+        }
+    },
+    "10": {
+        "productName": "Aceite Miraflores vegetal botella 900 cc",
+        "commertialOffer": {
+            "price": 1992,
+            "priceWithoutDiscount": 2590,
+            "discountValue": 23,
+            "packPrice": 0,
+            "quantity": 0
+        }
+    }
+}
