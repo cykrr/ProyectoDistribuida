@@ -14,6 +14,10 @@ public class Item {
 	public void setId(int id) {
 	    this.id = id;
 	}
+	
+	public void setPrecio(int precio) {
+		this.precio = precio;
+	}
 
 	public int getCantidad() {
 	    return cantidad;

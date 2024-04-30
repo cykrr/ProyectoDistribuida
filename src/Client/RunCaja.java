@@ -1,17 +1,24 @@
 package Client;
 
+import java.net.MalformedURLException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import Common.InterfazServidor;
 import Common.Item;
 
 
 public class RunCaja {
 
-	public static void main(String[] args) {
-		Cliente cliente = new Cliente();
-		//cliente.startClient();
-		Caja caja = new Caja();
+	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
+        
+        Caja caja = new Caja();
+            
+		//Cliente cliente = new Cliente();
 		ArrayList<Item> carrito = new ArrayList<>();
 		
 		////////Variables para leer porque no sé hacerlo de forma más eficiente/////

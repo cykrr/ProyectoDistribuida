@@ -62,7 +62,7 @@ public class Servidor implements InterfazServidor    {
 			return -1;
 		}
 
-		return -1;
+		//return -1;
 	}
 	public int obtenerBoleta(int idBoleta) throws RemoteException {
 		return 0;
@@ -70,7 +70,7 @@ public class Servidor implements InterfazServidor    {
 	public int modificarStock(int idProducto, int cantidad) throws RemoteException {
 		return 0;
 	}
-
+	
 	private HttpURLConnection establishConnection(String path) {
 		try {
 			URL apiUrl  = new URL(apiUrlString + "/" + path);
