@@ -1,8 +1,11 @@
+import json, os
 from flask import Flask, request
-import json
+
+script_path = os.path.realpath(__file__).strip("api.py")
+
 
 def read_products():
-    filename = "products.json"
+    filename = f"{script_path}/products.json"
     with open(filename, "r", encoding='utf-8') as file:
         return json.load(file)
     
