@@ -62,7 +62,6 @@ public class Servidor implements InterfazServidor    {
 			return -1;
 		}
 
-		return -1;
 	}
 	public int obtenerBoleta(int idBoleta) throws RemoteException {
 		return 0;
