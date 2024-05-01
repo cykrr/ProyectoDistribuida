@@ -2,3 +2,8 @@ bin/**/*.class
 *.class
 **/*.class
 /bin/
+**/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

@@ -1,0 +1,1 @@
+python -m waitress "src.API.app:app"
