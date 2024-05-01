@@ -61,7 +61,6 @@ public class Servidor implements InterfazServidor    {
 			System.err.println("Error al obtener el precio del producto");
 			return -1;
 		}
-
 	}
 	public int obtenerBoleta(int idBoleta) throws RemoteException {
 		return 0;
