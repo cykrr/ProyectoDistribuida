@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
@@ -22,14 +23,42 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import Common.InterfazServidor;
 import Common.Item;
+import Common.ItemBoleta;
 import Common.Boleta;
 // import JSON Jackson core
 
-public class Servidor implements InterfazServidor    {
-	static private String apiUrlString = "http://localhost:5000";
+public class Servidor implements InterfazServidor {
+	private static String apiUrlString = "http://localhost:5000";
+	private Connection conn;
 
-	Servidor() throws IOException {
+	public Servidor() throws IOException {
 		UnicastRemoteObject.exportObject(this, 0);
+		
+		try {
+			conn = createConnection();
+			crearBD(conn);
+		} catch (Exception e) {
+			System.err.println("Error: " + e.getMessage());
+			return;
+		}
+		
+		// SOLO PARA PRUEBAS
+		// MOSTRAR BOLETA DEBERÍA LLAMARSE DESDE CLIENTE
+		try {
+			Boleta boleta = obtenerBoleta(1);
+			System.out.println("Nombre cajero: " + boleta.getNombreCajero());
+			Iterator<ItemBoleta> it = boleta.getItems();
+			while(it.hasNext()) {
+				ItemBoleta item = it.next();
+				System.out.println("ID Prod: " + item.getIdProducto());
+				System.out.println("Cantidad: " + item.getCantidad());
+				System.out.println("Precio: " + item.getPrecioTotal() + "\n");
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		
 		// test connection to API
 		try {
 			obtenerItem(1);
@@ -42,25 +71,15 @@ public class Servidor implements InterfazServidor    {
 		}
 	}
 	
-	private void crearBD() {
-		Connection conn;
+	private void crearBD(Connection conn) throws Exception {
 		String queries;
-		
-		try {
-			conn = createConnection();
-		} catch (SQLException e) {
-			System.out.println("Error al conectar a la base de datos");
-			System.out.println("Error: " + e.getMessage());
-			return;
-		}
 		
 		String path = "src/Server/db.sql";
 		try {
 			queries = readFile(path);
 		} catch (IOException e) {
 			System.out.println("Error al leer archivo " + path);
-			System.out.println("Error: " + e.getMessage());
-			return;
+			throw e;
 		}
 		
 		String[] queriesArray = queries.split(";");
@@ -75,15 +94,46 @@ public class Servidor implements InterfazServidor    {
 				statement.executeQuery(query);
 			} catch (SQLException e) {
 				System.out.println("Error al ejecutar sentencia " + query);
-				System.out.println("Error: " + e.getMessage());
+				throw e;
 			}
         }
 		
 	}
 	
+	public Boleta obtenerBoleta(int idBoleta) throws SQLException {
+		String query = "SELECT cajeros.nombre, cajeros.idCajero, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
+				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN cajeros USING(idCajero) WHERE idBoleta = %d";
+		query = String.format(query, idBoleta);
+		
+		Statement statement = conn.createStatement();
+		ResultSet data = statement.executeQuery(query);
+		
+		int columnCount = data.getMetaData().getColumnCount();
+		if (columnCount == 0) {
+			// ID no existe, lanzar excepción (?)
+		}
+		
+		data.next();
+		String nombreCajero = data.getString("nombre");
+		int idCajero = data.getInt("idCajero");
+		Boleta boleta = new Boleta(idCajero, nombreCajero);
+		
+		do {
+			int idProducto = data.getInt("idProducto");
+			int precioTotal = data.getInt("precioTotal");
+			int cantidad = data.getInt("cantidad");
+			
+			ItemBoleta itemBoleta = new ItemBoleta(idProducto, "x", precioTotal, cantidad);
+			boleta.agregarItem(itemBoleta);
+		} while(data.next());
+		
+		return boleta;
+	}
+	
 	public int enviarBoleta(Boleta boleta) throws RemoteException {
 		return 0;
 	}
+	
 	public Item obtenerItem(int idProducto) throws APIDownException, ProductNotFoundException {
 		Map<String, String> params = new HashMap<>();
 		params.put("id", Integer.toString(idProducto));
@@ -127,9 +177,7 @@ public class Servidor implements InterfazServidor    {
 
 
 	}
-	public Boleta obtenerBoleta(int idBoleta) throws RemoteException {
-		return new Boleta();
-	}
+	
 	public int modificarStock(int idProducto, int cantidad) throws RemoteException {
 		return 0;
 	}
@@ -159,7 +207,12 @@ public class Servidor implements InterfazServidor    {
 
 		connectionProps.put("user", "root");
 		connectionProps.put("password", "");
-		conn = java.sql.DriverManager.getConnection("jdbc:mariadb://localhost:3306/", connectionProps);
+		try {
+			conn = java.sql.DriverManager.getConnection("jdbc:mariadb://localhost:3306/", connectionProps);
+		} catch (SQLException e) {
+			System.err.println("Error al conectar a la base de datos");
+			throw e;
+		}
 		return conn;
 	}
 	

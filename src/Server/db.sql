@@ -10,19 +10,19 @@ CREATE TABLE IF NOT EXISTS cajeros (
     clave INT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS ventas (
-    idVenta INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS boletas (
+    idBoleta INT AUTO_INCREMENT PRIMARY KEY,
     idCajero INT NOT NULL,
     FOREIGN KEY (idCajero) REFERENCES cajeros(idCajero)
 );
 
-CREATE TABLE IF NOT EXISTS productosVenta (
-    idVenta INT,
+CREATE TABLE IF NOT EXISTS itemsBoleta (
+    idBoleta INT,
     idProducto INT,
     precioTotal INT NOT NULL,
     cantidad INT NOT NULL,
-    PRIMARY KEY(idVenta, idProducto),
-    FOREIGN KEY (idVenta) REFERENCES ventas(idVenta)
+    PRIMARY KEY(idBoleta, idProducto),
+    FOREIGN KEY (idBoleta) REFERENCES boletas(idBoleta)
 );
 
 CREATE TABLE IF NOT EXISTS stock (
@@ -38,14 +38,14 @@ VALUES
     (2, 'Pepito', 22222),
     (3, 'Miguel', 33333);
 
-INSERT IGNORE INTO ventas
-    (idVenta, idCajero)
+INSERT IGNORE INTO boletas
+    (idBoleta, idCajero)
 VALUES
     (1, 1),
     (2, 1);
 
-INSERT IGNORE INTO productosVenta
-    (idVenta, idProducto, precioTotal, cantidad)
+INSERT IGNORE INTO itemsBoleta
+    (idBoleta, idProducto, precioTotal, cantidad)
 VALUES
     (1, 1, 3000, 1),
     (1, 5, 5000, 2),
