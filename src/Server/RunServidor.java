@@ -11,27 +11,28 @@ import Common.InterfazServidor;
 
 public class RunServidor {
     public static void main(String[] args) {
+        System.out.println("Initializing server...");
+        InterfazServidor servidor = null;
+        Registry r = null;
         try {
-            InterfazServidor servidor = new Servidor();
-            Registry r = LocateRegistry.createRegistry(1099);
-            r.bind("Servidor", (Remote) servidor);
-        } catch (RemoteException e) {
-            System.err.println("RemoteException occurred while creating the server.");
-            System.err.println("Error: " + e.getMessage());
-            System.exit(1);
-        } catch (AlreadyBoundException e) {
-            System.err.println("AlreadyBoundException occurred while creating the server.");
-            System.err.println("The port 1099 is already in use.");
-            System.exit(1);
+            servidor = new Servidor();
         } catch (IOException e) {
             System.err.println("IOException occurred while creating the server.");
             System.err.println("Error: " + e.getMessage());
             System.exit(1);
-        } catch (APIDownException e) { 
-            System.err.println("WARNING: API is down. Server will not be able to function properly.");
-        } catch (BDDownException e) {
-            System.err.println("WARNING: Database is down. Server will not be able to function properly.");
         }
+        
+        try {
+            r = LocateRegistry.createRegistry(1099);
+            r.bind("Servidor", (Remote) servidor);
+        } catch (RemoteException e) { 
+            System.err.println("RemoteException occurred while creating the registry.");
+            e.printStackTrace();
+        } catch (AlreadyBoundException e) {
+            System.err.println("Server already bound.");
+            e.printStackTrace();
+        }
+
         System.out.println("Server initialized successfully.");
     }
 

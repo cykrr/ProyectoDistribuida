@@ -22,7 +22,7 @@ pip install -r requirements.txt
 Luego:
 
 ```
-python src/API/api.py
+.\run_api_dev.cmd
 ```
 
 ### Levantamiento del servidor

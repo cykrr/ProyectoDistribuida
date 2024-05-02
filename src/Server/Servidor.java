@@ -1,10 +1,7 @@
 package Server;
 import java.io.BufferedReader;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Parameter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -15,33 +12,39 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import Common.InterfazServidor;
+import Common.Item;
 import Common.Boleta;
+// import JSON Jackson core
 
 public class Servidor implements InterfazServidor    {
 	static private String apiUrlString = "http://localhost:5000";
 
 	Servidor() throws IOException {
-		super();
 		UnicastRemoteObject.exportObject(this, 0);
 		// test connection to API
-		obtenerPrecio(1);
-		testBD();
-
+		try {
+			obtenerItem(1);
+		} catch (APIDownException e) {
+			System.err.println("API is down. Server will not be able to function properly.");
+		} try {
+			testBD();
+		} catch (BDDownException e) {
+			System.err.println("Database is down. Server will not be able to function properly.");
+		}
 	}
 	public int enviarBoleta(Boleta boleta) throws RemoteException {
 		return 0;
 	}
-	public int obtenerPrecio(int idProducto) throws APIDownException, ProductNotFoundException {
+	public Item obtenerItem(int idProducto) throws APIDownException, ProductNotFoundException {
 		Map<String, String> params = new HashMap<>();
 		params.put("id", Integer.toString(idProducto));
 		HttpURLConnection conn = establishConnection("products" +  ParameterStringBuilder.getParamsString(params));
 
 
-		conn.setDoOutput(true);
-		
-		conn.setConnectTimeout(500);
-		conn.setReadTimeout(500);
 		int status = -1;
 
 		try {
@@ -53,15 +56,24 @@ public class Servidor implements InterfazServidor    {
 				content.append(line);
 			}
 			in.close();
-			
-			int pricePos = content.toString().indexOf("\"price\"") + 7; 
-			String sub = content.toString().substring(pricePos);
-			String subsub = sub.substring(sub.indexOf(":")+1, sub.indexOf(","));
-			return Integer.parseInt(subsub);
+			ObjectMapper om = new ObjectMapper();
+			JsonNode base = om.readTree(content.toString());
+			JsonNode commertialOffer = base.get("commertialOffer");
 
+			Item item = new Item(
+				idProducto,
+				 commertialOffer.get("quantity").asInt(),
+				  commertialOffer.get("price").asInt(),
+				   commertialOffer.get("packPrice").asInt(),
+				    commertialOffer.get("priceWithoutDiscount").asInt(),
+					 commertialOffer.get("discountValue").asInt(),
+					 base.get("productName").asText());
+			return item;
 		} catch (IOException e) {
-			if (status != 200) {
+			if (status == 404) {
 				throw new ProductNotFoundException(idProducto);
+			} else if (status < 0) {
+				throw new APIDownException();
 			}
 			throw new APIDownException();
 		} finally {
@@ -70,8 +82,8 @@ public class Servidor implements InterfazServidor    {
 
 
 	}
-	public int obtenerBoleta(int idBoleta) throws RemoteException {
-		return 0;
+	public Boleta obtenerBoleta(int idBoleta) throws RemoteException {
+		return new Boleta();
 	}
 	public int modificarStock(int idProducto, int cantidad) throws RemoteException {
 		return 0;
@@ -82,6 +94,9 @@ public class Servidor implements InterfazServidor    {
 			URL apiUrl  = new URL(apiUrlString + "/" + path);
 			HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
 			conn.setRequestMethod("GET");
+			conn.setDoOutput(true);
+			conn.setConnectTimeout(500);
+			conn.setReadTimeout(500);
 			return conn;
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
