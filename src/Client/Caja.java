@@ -10,6 +10,7 @@ import Common.Boleta;
 import Common.InterfazServidor;
 import Common.Item;
 
+@SuppressWarnings("unused")
 public class Caja extends Cliente {
 
 	public Caja() throws RemoteException, NotBoundException {
@@ -19,7 +20,7 @@ public class Caja extends Cliente {
 
 	public ArrayList<Item> agregarItem(ArrayList<Item> caja, int idProducto, int cantidad) throws RemoteException{
 		
-		for (Item elemento : caja) {
+		for (Item elemento : caja) { 
 			if(elemento.getId() == idProducto) {
 				elemento.setCantidad(elemento.getCantidad()+cantidad);
 				return caja;
@@ -35,7 +36,9 @@ public class Caja extends Cliente {
 	
 	public void consultarItem(int id) throws RemoteException{
 		int precio = servidor.obtenerPrecio(id);
+		String nombre = servidor.obtenerNombre(id);
 		System.out.println("\nID:" + id);
+		System.out.println(nombre);
 		System.out.println("Precio: "+ precio);
 	}
 	

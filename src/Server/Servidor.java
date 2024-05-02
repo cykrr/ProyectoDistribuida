@@ -13,6 +13,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 
+
 import Common.InterfazServidor;
 import Common.Boleta;
 
@@ -61,9 +62,60 @@ public class Servidor implements InterfazServidor    {
 			System.err.println("Error al obtener el precio del producto");
 			return -1;
 		}
+		
 
 		//return -1;
 	}
+	
+	public String obtenerNombre(int idProducto) throws RemoteException {
+	    Map<String, String> params = new HashMap<>();
+	    params.put("id", Integer.toString(idProducto));
+	    HttpURLConnection conn = establishConnection("products" +  ParameterStringBuilder.getParamsString(params));
+
+	    conn.setDoOutput(true);
+	    conn.setConnectTimeout(500);
+	    conn.setReadTimeout(500);
+
+	    try {
+	        int status = conn.getResponseCode();
+	        System.out.println("Status: " + status);
+	        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+	        String line;
+	        StringBuilder content = new StringBuilder();
+	        while ((line = in.readLine()) != null) {
+	            content.append(line);
+	        }
+	        in.close();
+	        assert status == 200;
+
+	        // Find the position of "productName"
+	        String productNameKey = "\"productName\": \""+1;
+	        int start = content.indexOf(productNameKey);
+	        if (start == -1) {
+	            System.err.println("Error al obtener el nombre del producto");
+	            return null;
+	        }
+	        start += productNameKey.length();
+
+	        // Find the end of the product name
+	        int end = content.indexOf("\"", start);
+	        if (end == -1) {
+	            System.err.println("Error al obtener el nombre del producto");
+	            return null;
+	        }
+
+	        // Extract the product name
+	        String productName = content.substring(start, end);
+	        System.out.println(productName);
+	        return productName;
+
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	        System.err.println("Error al obtener el nombre del producto");
+	        return null;
+	    }
+	}
+	
 	public int obtenerBoleta(int idBoleta) throws RemoteException {
 		return 0;
 	}

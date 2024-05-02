@@ -1,24 +1,20 @@
 package Client;
 
-import java.net.MalformedURLException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import Common.InterfazServidor;
 import Common.Item;
 
 
 public class RunCaja {
 
-	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
-        
-        Caja caja = new Caja();
-            
-		//Cliente cliente = new Cliente();
+	public static void main(String[] args) throws RemoteException, NotBoundException {
+		@SuppressWarnings("unused")
+		Cliente cliente = new Cliente();
+		//cliente.startClient();
+		Caja caja = new Caja();
 		ArrayList<Item> carrito = new ArrayList<>();
 		
 		////////Variables para leer porque no sé hacerlo de forma más eficiente/////
@@ -52,14 +48,12 @@ public class RunCaja {
 					cantidad = scanner.nextInt();
 					
 					carrito = caja.agregarItem(carrito, id, cantidad);
-					break;
 					
 				case 2:
 					
 					System.out.print("\nIngrese id: ");
 					id = scanner.nextInt();
 					caja.consultarItem(id);
-					break;
 					
 				case 3:
 					
@@ -70,12 +64,10 @@ public class RunCaja {
 					cantidad = scanner.nextInt();
 					
 					carrito = caja.eliminarItem(carrito, id, cantidad);
-					break;
 					
 				case 4:
 					
 					caja.consultarCarrito(carrito);
-					break;
 				
 				case 5:
 					caja.finalizarVenta();
