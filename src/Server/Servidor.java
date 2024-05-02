@@ -8,6 +8,9 @@ import java.net.URL;
 import java.rmi.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -31,11 +34,51 @@ public class Servidor implements InterfazServidor    {
 		} catch (APIDownException e) {
 			System.err.println("API is down. Server will not be able to function properly.");
 		} try {
-			testBD();
+			// testBD();
 		} catch (BDDownException e) {
 			System.err.println("Database is down. Server will not be able to function properly.");
 		}
 	}
+	
+	private void crearBD() {
+		Connection conn;
+		String queries;
+		
+		try {
+			conn = createConnection();
+		} catch (SQLException e) {
+			System.out.println("Error al conectar a la base de datos");
+			System.out.println("Error: " + e.getMessage());
+			return;
+		}
+		
+		String path = "src/Server/db.sql";
+		try {
+			queries = readFile(path);
+		} catch (IOException e) {
+			System.out.println("Error al leer archivo " + path);
+			System.out.println("Error: " + e.getMessage());
+			return;
+		}
+		
+		String[] queriesArray = queries.split(";");
+		
+        for (int i = 0; i < queriesArray.length; i++) {
+            queriesArray[i] = queriesArray[i].trim();
+        }
+		
+        for (String query : queriesArray) {
+        	try {
+				Statement statement = conn.createStatement();
+				statement.executeQuery(query);
+			} catch (SQLException e) {
+				System.out.println("Error al ejecutar sentencia " + query);
+				System.out.println("Error: " + e.getMessage());
+			}
+        }
+		
+	}
+	
 	public int enviarBoleta(Boleta boleta) throws RemoteException {
 		return 0;
 	}
@@ -108,26 +151,32 @@ public class Servidor implements InterfazServidor    {
 		return null;
 	}
 
-	private void testBD() throws BDDownException {
+	private Connection createConnection() throws SQLException {
 		Connection conn = null;
 		Properties connectionProps = new Properties();
-		// Assume default XAMPP mysql creds
+
 		connectionProps.put("user", "root");
 		connectionProps.put("password", "");
-		try {
-			conn = java.sql.DriverManager.getConnection("jdbc:mariadb://localhost:3306/", connectionProps);
-		} catch (java.sql.SQLException e) {
-			System.out.println("Error al conectar a la base de datos");
-			System.out.println("Error: " + e.getMessage());
-			throw new BDDownException();
-		} finally {
-			try {
-				if (conn != null)
-					conn.close();
-			} catch (java.sql.SQLException e) {
-				e.printStackTrace();
-			}
-		}
+		conn = java.sql.DriverManager.getConnection("jdbc:mariadb://localhost:3306/", connectionProps);
+		return conn;
+	}
+	
+	private String readFile(String path) throws IOException {
+        StringBuilder contenido = new StringBuilder();
+
+        File archivo = new File(path);
+        FileReader fr = new FileReader(archivo);
+        BufferedReader br = new BufferedReader(fr);
+
+        String linea;
+        while ((linea = br.readLine()) != null) {
+            contenido.append(linea);
+            contenido.append("\n");
+        }
+
+        br.close();
+
+        return contenido.toString();
 	}
 
 }
