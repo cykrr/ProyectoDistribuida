@@ -161,10 +161,12 @@ public class Servidor implements InterfazServidor {
 	}
 	
 	public void generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException, SQLException {
-		String query;
 		try {
+			// Empezar transacción
 			conn.setAutoCommit(false);
-			query = "INSERT INTO boletas(idCajero) VALUES (%d)";
+			
+			// Crear idBoleta y asignar a idCajero
+			String query = "INSERT INTO boletas(idCajero) VALUES (%d)";
 			query = String.format(query, idCajero);
 			
 			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
@@ -174,8 +176,11 @@ public class Servidor implements InterfazServidor {
 			data.next();
 			int idBoleta = data.getInt(1);
 			
+			// Insertar items a la boleta
 			Statement statement = conn.createStatement();
-			query = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
+			String queryItem = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
+			String queryStock = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
+			String currentQuery;
 			
 			for(int i = 0; i < itemsCarrito.size(); i++) {
 				ItemCarrito itemCarrito = itemsCarrito.get(i);
@@ -190,15 +195,22 @@ public class Servidor implements InterfazServidor {
 				int cantidad = itemCarrito.getCantidad();		
 				int precioTotal = calcularPrecioTotal(item, cantidad);
 				
-				String currentQuery = String.format(query, idBoleta, item.getId(), precioTotal, cantidad);
+				currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
 				statement.executeQuery(currentQuery);
+				
+				// Actualizar stock
+				currentQuery = String.format(queryStock, cantidad, item.getId());
+				statement.executeUpdate(currentQuery);
 			}
 			
+			// Finalizar transacción
 			conn.commit();
 		}
 		catch(Exception e) {
-			conn.rollback();
+
+			conn.rollback(); // Si algo falla, descartar cambios.
 			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
+
 			System.err.println(e);
 		}
 		finally {
