@@ -3,20 +3,31 @@ package Client;
 import java.net.MalformedURLException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 import Common.Item;
+import Common.ItemCarrito;
 
 
 public class RunCaja {
 
-	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
+	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, SQLException {
         
-        Caja caja = new Caja();
+        Caja caja = null;
+        
+        try {
+        	caja = new Caja();
+        }catch(RemoteException e) {
+        	System.out.print("No se encontró el servidor");
+        }
+        
+        
+        int idCajero = 123;
             
 		//Cliente cliente = new Cliente();
-		ArrayList<Item> carrito = new ArrayList<>();
+		ArrayList<ItemCarrito> carrito = new ArrayList<>();
 		
 		////////Variables para leer porque no sé hacerlo de forma más eficiente/////
 		
@@ -75,7 +86,7 @@ public class RunCaja {
 					break;
 				
 				case 5:
-					caja.finalizarVenta();
+					caja.finalizarVenta(carrito, idCajero);
 					carrito = new ArrayList<>();
 					break;
 					
