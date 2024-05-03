@@ -5,8 +5,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.rmi.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
@@ -16,10 +16,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
+import org.mariadb.jdbc.DatabaseMetaData;
+
+// import JSON Jackson core
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -27,8 +29,12 @@ import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemBoleta;
 import Common.ItemCarrito;
+import Common.ProductNotFoundException;
+import Common.StockMismatchException;
+import Common.APIDownException;
+import Common.BDDownException;
 import Common.Boleta;
-// import JSON Jackson core
+import Common.BoletaNotFoundException;
 
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
@@ -75,11 +81,7 @@ public class Servidor implements InterfazServidor {
 		
 		try {
 			generarBoleta(itemsCarrito, 1);
-		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -103,7 +105,7 @@ public class Servidor implements InterfazServidor {
 		try {
 			queries = readFile(path);
 		} catch (IOException e) {
-			System.out.println("Error al leer archivo " + path);
+			System.out.println("Error al leer archivo " + path + ".\nNo se pudo crear la base de datos.");
 			throw e;
 		}
 		
@@ -135,7 +137,7 @@ public class Servidor implements InterfazServidor {
 		
 		int columnCount = data.getMetaData().getColumnCount();
 		if (columnCount == 0) {
-			// ID no existe, lanzar excepción (?)
+			throw new BoletaNotFoundException(idBoleta);
 		}
 		
 		data.next();
@@ -183,6 +185,13 @@ public class Servidor implements InterfazServidor {
 			for(int i = 0; i < itemsCarrito.size(); i++) {
 				ItemCarrito itemCarrito = itemsCarrito.get(i);
 				Item item = itemCarrito.getItem();
+				Item dbItem = obtenerItem(item.getId());
+				int stock = obtenerStock(item.getId());
+				if (dbItem == null) {
+					throw new ProductNotFoundException(item.getId());
+				} else if (itemCarrito.getCantidad() > stock) {
+					throw new StockMismatchException(item.getId(), stock);
+				}
 				int cantidad = itemCarrito.getCantidad();		
 				int precioTotal = calcularPrecioTotal(item, cantidad);
 				
@@ -198,7 +207,10 @@ public class Servidor implements InterfazServidor {
 			conn.commit();
 		}
 		catch(Exception e) {
-			conn.rollback(); // Si algo falla, descartar cambios
+
+			conn.rollback(); // Si algo falla, descartar cambios.
+			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
+
 			System.err.println(e);
 		}
 		finally {
@@ -206,6 +218,11 @@ public class Servidor implements InterfazServidor {
 		}
 	}
 	
+	private int obtenerStock(int id) {
+		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException("Unimplemented method 'obtenerStock'");
+	}
+
 	private int calcularPrecioTotal(Item item, int cantidad) {
 		if(item.getCantidadPack() == 0) {
 			return cantidad * item.getPrecioDescuento();
@@ -220,11 +237,13 @@ public class Servidor implements InterfazServidor {
 		params.put("id", Integer.toString(idProducto));
 		HttpURLConnection conn = establishConnection("products" +  ParameterStringBuilder.getParamsString(params));
 
-
 		int status = -1;
 
 		try {
 			status = conn.getResponseCode();
+			if (status != 404) {
+				throw new ElementNotFoundException();
+			}
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			String line;
 			StringBuilder content = new StringBuilder();
@@ -248,9 +267,7 @@ public class Servidor implements InterfazServidor {
 			
 			return item;
 		} catch (IOException e) {
-			if (status == 404) {
-				throw new ProductNotFoundException(idProducto);
-			} else if (status < 0) {
+			if (status < 0) {
 				throw new APIDownException();
 			}
 			throw new APIDownException();
@@ -267,19 +284,16 @@ public class Servidor implements InterfazServidor {
 
 	private HttpURLConnection establishConnection(String path) {
 		try {
-			URL apiUrl  = new URL(apiUrlString + "/" + path);
-			HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
+			URI apiUrl = new URI(apiUrlString + "/" + path);
+			HttpURLConnection conn = (HttpURLConnection) apiUrl.toURL().openConnection();
 			conn.setRequestMethod("GET");
 			conn.setDoOutput(true);
 			conn.setConnectTimeout(500);
 			conn.setReadTimeout(500);
 			return conn;
-		} catch (MalformedURLException e) {
+		} catch (URISyntaxException | IOException e) {
 			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API");
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API");
+			System.err.println("Error al crear la conexion a la API (URL malformada)");
 		}
 		return null;
 	}
@@ -316,5 +330,4 @@ public class Servidor implements InterfazServidor {
 
         return contenido.toString();
 	}
-
 }

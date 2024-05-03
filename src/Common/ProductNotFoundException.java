@@ -1,7 +1,7 @@
-package Server;
+package Common;
 
 public class ProductNotFoundException extends RuntimeException {
-    ProductNotFoundException(int id) {
+    public ProductNotFoundException(int id) {
         super("Product with id " + id + " not found.");
     }
 
