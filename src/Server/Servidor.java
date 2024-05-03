@@ -18,6 +18,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -30,6 +33,7 @@ import Common.Boleta;
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
 	private Connection conn;
+	JSONObject object = new JSONObject();
 
 	public Servidor() throws IOException {
 		UnicastRemoteObject.exportObject(this, 0);
@@ -51,6 +55,7 @@ public class Servidor implements InterfazServidor {
 			while(it.hasNext()) {
 				ItemBoleta item = it.next();
 				System.out.println("ID Prod: " + item.getIdProducto());
+				System.out.println("Nombre Prod: " + item.getNombreProducto());
 				System.out.println("Cantidad: " + item.getCantidad());
 				System.out.println("Precio: " + item.getPrecioTotal() + "\n");
 			}
@@ -123,7 +128,10 @@ public class Servidor implements InterfazServidor {
 			int precioTotal = data.getInt("precioTotal");
 			int cantidad = data.getInt("cantidad");
 			
-			ItemBoleta itemBoleta = new ItemBoleta(idProducto, "x", precioTotal, cantidad);
+			Item item = obtenerItem(idProducto);
+			String nombreProducto = item.getNombre();
+			
+			ItemBoleta itemBoleta = new ItemBoleta(idProducto, nombreProducto, precioTotal, cantidad);
 			boleta.agregarItem(itemBoleta);
 		} while(data.next());
 		
