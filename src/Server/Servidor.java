@@ -228,12 +228,14 @@ public class Servidor implements InterfazServidor {
 
 			Item item = new Item(
 				idProducto,
-				 commertialOffer.get("quantity").asInt(),
-				  commertialOffer.get("price").asInt(),
-				   commertialOffer.get("packPrice").asInt(),
-				    commertialOffer.get("priceWithoutDiscount").asInt(),
-					 commertialOffer.get("discountValue").asInt(),
-					 base.get("productName").asText());
+				commertialOffer.get("priceWithoutDiscount").asInt(),
+				commertialOffer.get("discountValue").asInt(),
+				commertialOffer.get("price").asInt(),
+				commertialOffer.get("quantity").asInt(),
+				commertialOffer.get("packPrice").asInt(),
+				base.get("productName").asText()
+			);
+			
 			return item;
 		} catch (IOException e) {
 			if (status == 404) {
