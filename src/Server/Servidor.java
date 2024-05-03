@@ -10,6 +10,7 @@ import java.net.URL;
 import java.rmi.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -48,6 +49,7 @@ public class Servidor implements InterfazServidor {
 		
 		// SOLO PARA PRUEBAS
 		// MOSTRAR BOLETA DEBERÍA LLAMARSE DESDE CLIENTE
+		/*
 		try {
 			Boleta boleta = obtenerBoleta(1);
 			System.out.println("Nombre cajero: " + boleta.getNombreCajero());
@@ -60,6 +62,22 @@ public class Servidor implements InterfazServidor {
 				System.out.println("Precio: " + item.getPrecioTotal() + "\n");
 			}
 		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		*/
+		
+		Boleta boleta = new Boleta(1, "Juan");
+		ItemBoleta itemBoleta1 = new ItemBoleta(8, "fideos", 20000, 18);
+		ItemBoleta itemBoleta2 = new ItemBoleta(6, "arroz", 16000, 14);
+		boleta.agregarItem(itemBoleta1);
+		boleta.agregarItem(itemBoleta2);
+		try {
+			enviarBoleta(boleta);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -138,7 +156,39 @@ public class Servidor implements InterfazServidor {
 		return boleta;
 	}
 	
-	public int enviarBoleta(Boleta boleta) throws RemoteException {
+	public int enviarBoleta(Boleta boleta) throws RemoteException, SQLException {
+		String query;
+		try {
+			conn.setAutoCommit(false);
+			query = "INSERT INTO boletas(idCajero) VALUES (%d)";
+			query = String.format(query, boleta.getIdCajero());
+			
+			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+			pstatement.executeUpdate();
+
+			ResultSet data = pstatement.getGeneratedKeys();
+			data.next();
+			int idBoleta = data.getInt(1);
+			
+			Statement statement = conn.createStatement();
+			query = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
+			
+			Iterator<ItemBoleta> it = boleta.getItems();
+			while(it.hasNext()) {
+				ItemBoleta item = it.next();
+				String currentQuery = String.format(query, idBoleta, item.getIdProducto(), item.getPrecioTotal(), item.getCantidad());
+				statement.executeQuery(currentQuery);
+			}
+			
+			conn.commit();
+		}
+		catch(Exception e) {
+			conn.rollback();
+			System.err.println(e);
+		}
+		finally {
+			conn.setAutoCommit(true);
+		}
 		return 0;
 	}
 	
