@@ -20,9 +20,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -36,7 +33,6 @@ import Common.Boleta;
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
 	private Connection conn;
-	JSONObject object = new JSONObject();
 
 	public Servidor() throws IOException {
 		UnicastRemoteObject.exportObject(this, 0);
