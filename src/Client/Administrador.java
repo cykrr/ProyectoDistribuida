@@ -7,7 +7,6 @@ public class Administrador extends Cliente {
 
 	public Administrador() throws RemoteException, NotBoundException {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 
 }

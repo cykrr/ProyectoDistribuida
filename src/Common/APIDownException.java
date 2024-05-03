@@ -1,7 +1,7 @@
-package Server;
+package Common;
 
 public class APIDownException extends RuntimeException {
-    APIDownException() {
+    public APIDownException() {
         super("API is down.");
     }
 

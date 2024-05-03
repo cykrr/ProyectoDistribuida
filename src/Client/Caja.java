@@ -14,7 +14,6 @@ public class Caja extends Cliente {
 
 	public Caja() throws RemoteException, NotBoundException {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 
 	public ArrayList<Item> agregarItem(ArrayList<Item> caja, int idProducto, int cantidad) throws RemoteException{
