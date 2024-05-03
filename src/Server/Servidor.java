@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.rmi.*;
 import java.rmi.server.UnicastRemoteObject;
@@ -253,19 +255,16 @@ public class Servidor implements InterfazServidor {
 
 	private HttpURLConnection establishConnection(String path) {
 		try {
-			URL apiUrl  = new URL(apiUrlString + "/" + path);
-			HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
+			URI apiUrl = new URI(apiUrlString + "/" + path);
+			HttpURLConnection conn = (HttpURLConnection) apiUrl.toURL().openConnection();
 			conn.setRequestMethod("GET");
 			conn.setDoOutput(true);
 			conn.setConnectTimeout(500);
 			conn.setReadTimeout(500);
 			return conn;
-		} catch (MalformedURLException e) {
+		} catch (URISyntaxException | IOException e) {
 			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API");
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API");
+			System.err.println("Error al crear la conexion a la API (URL malformada)");
 		}
 		return null;
 	}
@@ -301,6 +300,12 @@ public class Servidor implements InterfazServidor {
         br.close();
 
         return contenido.toString();
+	}
+
+	@Override
+	public void generarBoleta(Boleta boleta) throws RemoteException, SQLException {
+		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException("Unimplemented method 'generarBoleta'");
 	}
 
 }
