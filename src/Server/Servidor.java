@@ -68,10 +68,10 @@ public class Servidor implements InterfazServidor {
 		
 		ArrayList<ItemCarrito> itemsCarrito = new ArrayList<>();
 		
-		Item item1 = new Item(7, 0, 2999, 0, 0, 0, "fideos");
-		Item item2 = new Item(8, 0, 3999, 0, 0, 0, "arroz");
+		Item item1 = new Item(4, 3000, 10, 2700, 0, 0, "fideos");
+		Item item2 = new Item(5, 1000, 0, 1000, 2, 1800, "arroz");
 		ItemCarrito itemCarrito1 = new ItemCarrito(item1, 2);
-		ItemCarrito itemCarrito2 = new ItemCarrito(item2, 2);
+		ItemCarrito itemCarrito2 = new ItemCarrito(item2, 7);
 		itemsCarrito.add(itemCarrito1);
 		itemsCarrito.add(itemCarrito2);
 		
@@ -180,8 +180,7 @@ public class Servidor implements InterfazServidor {
 			for(int i = 0; i < itemsCarrito.size(); i++) {
 				ItemCarrito itemCarrito = itemsCarrito.get(i);
 				Item item = itemCarrito.getItem();
-				int cantidad = itemCarrito.getCantidad();
-				
+				int cantidad = itemCarrito.getCantidad();		
 				int precioTotal = calcularPrecioTotal(item, cantidad);
 				
 				String currentQuery = String.format(query, idBoleta, item.getId(), precioTotal, cantidad);
@@ -200,7 +199,12 @@ public class Servidor implements InterfazServidor {
 	}
 	
 	private int calcularPrecioTotal(Item item, int cantidad) {
-		return 0;
+		if(item.getCantidadPack() == 0) {
+			return cantidad * item.getPrecioDescuento();
+		}
+		int cantidadPromo = cantidad / item.getCantidadPack();
+		int resto = cantidad % item.getCantidadPack();
+		return cantidadPromo * item.getPrecioPack() + resto * item.getPrecioDescuento();
 	}
 	
 	public Item obtenerItem(int idProducto) throws APIDownException, ProductNotFoundException {
