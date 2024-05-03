@@ -305,11 +305,4 @@ public class Servidor implements InterfazServidor {
 
         return contenido.toString();
 	}
-
-	@Override
-	public void generarBoleta(Boleta boleta) throws RemoteException, SQLException {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'generarBoleta'");
-	}
-
 }
