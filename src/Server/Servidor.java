@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import org.mariadb.jdbc.DatabaseMetaData;
+//import org.mariadb.jdbc.DatabaseMetaData;
 
 // import JSON Jackson core
 import com.fasterxml.jackson.databind.JsonNode;
@@ -211,7 +211,7 @@ public class Servidor implements InterfazServidor {
 			conn.rollback(); // Si algo falla, descartar cambios.
 			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
 
-			System.err.println(e);
+			//System.err.println(e);
 		}
 		finally {
 			conn.setAutoCommit(true);
@@ -242,7 +242,7 @@ public class Servidor implements InterfazServidor {
 		try {
 			status = conn.getResponseCode();
 			if (status != 404) {
-				throw new ElementNotFoundException();
+				//throw new ElementNotFoundException();
 			}
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			String line;

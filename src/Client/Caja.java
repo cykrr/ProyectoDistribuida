@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import Common.Boleta;
 import Common.InterfazServidor;
 import Common.Item;
+import Common.ProductNotFoundException;
 
 public class Caja extends Cliente {
 
@@ -16,33 +17,38 @@ public class Caja extends Cliente {
 		super();
 	}
 
-	public ArrayList<Item> agregarItem(ArrayList<Item> caja, int idProducto, int cantidad) throws RemoteException{
+	public ArrayList<Item> agregarItem(ArrayList<Item> caja, int id, int cantidad) throws RemoteException{
 		
 		for (Item elemento : caja) {
-			if(elemento.getId() == idProducto) {
-				elemento.setCantidad(elemento.getCantidad()+cantidad);
+			if(elemento.getId() == id) {
+				elemento.setCantidadPack(elemento.getCantidadPack()+cantidad);
 				return caja;
 			}
 		}
-		Item item = new Item();
-		item.setId(idProducto);
-		item.setCantidad(cantidad);
-		item.setPrecio(servidor.obtenerPrecio(idProducto));
+		Item item = servidor.obtenerItem(id);
 		caja.add(item);
 		return caja;
 	}
 	
 	public void consultarItem(int id) throws RemoteException{
-		int precio = servidor.obtenerPrecio(id);
-		System.out.println("\nID:" + id);
-		System.out.println("Precio: "+ precio);
+		try {
+			Item item = servidor.obtenerItem(id);
+			System.out.println("\nNombre:" + item.getNombre());
+			System.out.println("Precio base: "+ item.getPrecio());
+			if(item.getDescuento() == 1) {
+				System.out.println("Precio con descuento: "+ item.getPrecioDescuento());
+			}
+		}catch(ProductNotFoundException e){
+			System.out.println("No se pudo obtener el item");
+			throw e;
+		}
 	}
 	
 	public ArrayList<Item> eliminarItem(ArrayList<Item> caja, int idProducto, int cantidad){
 		for (Item elemento : caja) {
 			if(elemento.getId() == idProducto) {
-				elemento.setCantidad(elemento.getCantidad()-cantidad);
-				if(elemento.getCantidad() <= 0) {
+				elemento.setCantidadPack(elemento.getCantidadPack()-cantidad);
+				if(elemento.getCantidadPack() <= 0) {
 					caja.remove(elemento);
 				}
 				return caja;
@@ -56,16 +62,16 @@ public class Caja extends Cliente {
 		int total = 0;
 		System.out.println("\n Resumen boleta:");
 		for (Item elemento : caja) {
-		    System.out.println("-ID: " + elemento.getId() + " x" + elemento.getCantidad() + " total:" + elemento.precioTotal() + "$");
-		    total += elemento.precioTotal();
+		    System.out.println("-ID: " + elemento.getId() + " x" + elemento.getCantidadPack() + " total:" + elemento.getCantidadPack()*elemento.getPrecio() + "$");
+		    total += elemento.getCantidadPack()*elemento.getPrecio();
 		}
 		System.out.println("Total a pagar: " + total + "$");
 	}
 	
 	public void finalizarVenta() throws RemoteException {
 		//Guardar boleta o que se yo
-		Boleta boleta = new Boleta();
-		servidor.enviarBoleta(boleta);
+		//Boleta boleta = new Boleta();
+		//servidor.enviarBoleta(boleta);
 		System.out.println("Gacias por comprar!");
 	}
 	
