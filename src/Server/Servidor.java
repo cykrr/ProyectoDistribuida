@@ -14,6 +14,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -28,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemBoleta;
+import Common.ItemCarrito;
 import Common.Boleta;
 // import JSON Jackson core
 
@@ -66,13 +68,17 @@ public class Servidor implements InterfazServidor {
 		}
 		*/
 		
-		Boleta boleta = new Boleta(1, "Juan");
-		ItemBoleta itemBoleta1 = new ItemBoleta(8, "fideos", 20000, 18);
-		ItemBoleta itemBoleta2 = new ItemBoleta(6, "arroz", 16000, 14);
-		boleta.agregarItem(itemBoleta1);
-		boleta.agregarItem(itemBoleta2);
+		ArrayList<ItemCarrito> itemsCarrito = new ArrayList<>();
+		
+		Item item1 = new Item(7, 0, 2999, 0, 0, 0, "fideos");
+		Item item2 = new Item(8, 0, 3999, 0, 0, 0, "arroz");
+		ItemCarrito itemCarrito1 = new ItemCarrito(item1, 2);
+		ItemCarrito itemCarrito2 = new ItemCarrito(item2, 2);
+		itemsCarrito.add(itemCarrito1);
+		itemsCarrito.add(itemCarrito2);
+		
 		try {
-			enviarBoleta(boleta);
+			generarBoleta(itemsCarrito, 1);
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -156,12 +162,12 @@ public class Servidor implements InterfazServidor {
 		return boleta;
 	}
 	
-	public int enviarBoleta(Boleta boleta) throws RemoteException, SQLException {
+	public void generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException, SQLException {
 		String query;
 		try {
 			conn.setAutoCommit(false);
 			query = "INSERT INTO boletas(idCajero) VALUES (%d)";
-			query = String.format(query, boleta.getIdCajero());
+			query = String.format(query, idCajero);
 			
 			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 			pstatement.executeUpdate();
@@ -173,10 +179,14 @@ public class Servidor implements InterfazServidor {
 			Statement statement = conn.createStatement();
 			query = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
 			
-			Iterator<ItemBoleta> it = boleta.getItems();
-			while(it.hasNext()) {
-				ItemBoleta item = it.next();
-				String currentQuery = String.format(query, idBoleta, item.getIdProducto(), item.getPrecioTotal(), item.getCantidad());
+			for(int i = 0; i < itemsCarrito.size(); i++) {
+				ItemCarrito itemCarrito = itemsCarrito.get(i);
+				Item item = itemCarrito.getItem();
+				int cantidad = itemCarrito.getCantidad();
+				
+				int precioTotal = calcularPrecioTotal(item, cantidad);
+				
+				String currentQuery = String.format(query, idBoleta, item.getId(), precioTotal, cantidad);
 				statement.executeQuery(currentQuery);
 			}
 			
@@ -189,6 +199,9 @@ public class Servidor implements InterfazServidor {
 		finally {
 			conn.setAutoCommit(true);
 		}
+	}
+	
+	private int calcularPrecioTotal(Item item, int cantidad) {
 		return 0;
 	}
 	
