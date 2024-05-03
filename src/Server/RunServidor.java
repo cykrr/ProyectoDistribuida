@@ -10,18 +10,31 @@ import java.rmi.registry.Registry;
 import Common.InterfazServidor;
 
 public class RunServidor {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
+        System.out.println("Initializing server...");
+        InterfazServidor servidor = null;
+        Registry r = null;
         try {
-            InterfazServidor servidor = new Servidor();
-            Registry r = LocateRegistry.createRegistry(1099);
-            r.bind("Servidor", (Remote) servidor);
-        } catch (RemoteException e) {
-            System.err.println("Error al crear el servidor (RemoteException)");
-        } catch (AlreadyBoundException e) {
-            System.err.println("Error al crear el servidor");
-            System.err.println("El puerto 1099 ya está en uso.");
+            servidor = new Servidor();
+        } catch (IOException e) {
+            System.err.println("IOException occurred while creating the server.");
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
         }
-        System.out.println("Servidor inicializado correctamente.");
+        
+        try {
+            r = LocateRegistry.createRegistry(1099);
+            r.bind("Servidor", (Remote) servidor);
+        } catch (RemoteException e) { 
+            System.err.println("RemoteException occurred while creating the registry.");
+            e.printStackTrace();
+        } catch (AlreadyBoundException e) {
+            System.err.println("Server already bound.");
+            e.printStackTrace();
+        }
+
+        System.out.println("Server initialized successfully.");
     }
+
 
 }

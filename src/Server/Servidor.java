@@ -1,46 +1,249 @@
 package Server;
 import java.io.BufferedReader;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Parameter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.rmi.*;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
+
+import org.mariadb.jdbc.DatabaseMetaData;
+
+// import JSON Jackson core
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import Common.InterfazServidor;
+import Common.Item;
+import Common.ItemBoleta;
+import Common.ItemCarrito;
+import Common.ProductNotFoundException;
+import Common.StockMismatchException;
+import Common.APIDownException;
+import Common.BDDownException;
 import Common.Boleta;
+import Common.BoletaNotFoundException;
 
-public class Servidor implements InterfazServidor    {
-	static private String apiUrlString = "http://localhost:5000";
+public class Servidor implements InterfazServidor {
+	private static String apiUrlString = "http://localhost:5000";
+	private Connection conn;
 
-	Servidor() throws IOException {
-		super();
+	public Servidor() throws IOException {
 		UnicastRemoteObject.exportObject(this, 0);
-		obtenerPrecio(1);
+		
+		try {
+			conn = createConnection();
+			crearBD(conn);
+		} catch (Exception e) {
+			System.err.println("Error: " + e.getMessage());
+			return;
+		}
+		
+		// SOLO PARA PRUEBAS
+		// MOSTRAR BOLETA DEBERÍA LLAMARSE DESDE CLIENTE
+		/*
+		try {
+			Boleta boleta = obtenerBoleta(1);
+			System.out.println("Nombre cajero: " + boleta.getNombreCajero());
+			Iterator<ItemBoleta> it = boleta.getItems();
+			while(it.hasNext()) {
+				ItemBoleta item = it.next();
+				System.out.println("ID Prod: " + item.getIdProducto());
+				System.out.println("Nombre Prod: " + item.getNombreProducto());
+				System.out.println("Cantidad: " + item.getCantidad());
+				System.out.println("Precio: " + item.getPrecioTotal() + "\n");
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		*/
+		
+		ArrayList<ItemCarrito> itemsCarrito = new ArrayList<>();
+		
+		Item item1 = new Item(4, 3000, 10, 2700, 0, 0, "fideos");
+		Item item2 = new Item(5, 1000, 0, 1000, 2, 1800, "arroz");
+		ItemCarrito itemCarrito1 = new ItemCarrito(item1, 2);
+		ItemCarrito itemCarrito2 = new ItemCarrito(item2, 7);
+		itemsCarrito.add(itemCarrito1);
+		itemsCarrito.add(itemCarrito2);
+		
+		try {
+			generarBoleta(itemsCarrito, 1);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		
+		// test connection to API
+		try {
+			obtenerItem(1);
+		} catch (APIDownException e) {
+			System.err.println("API is down. Server will not be able to function properly.");
+		} try {
+			// testBD();
+		} catch (BDDownException e) {
+			System.err.println("Database is down. Server will not be able to function properly.");
+		}
 	}
-	public int enviarBoleta(Boleta boleta) throws RemoteException {
-		return 0;
+	
+	private void crearBD(Connection conn) throws Exception {
+		String queries;
+		
+		String path = "src/Server/db.sql";
+		try {
+			queries = readFile(path);
+		} catch (IOException e) {
+			System.out.println("Error al leer archivo " + path + ".\nNo se pudo crear la base de datos.");
+			throw e;
+		}
+		
+		String[] queriesArray = queries.split(";");
+		
+        for (int i = 0; i < queriesArray.length; i++) {
+            queriesArray[i] = queriesArray[i].trim();
+        }
+		
+        for (String query : queriesArray) {
+        	try {
+				Statement statement = conn.createStatement();
+				statement.executeQuery(query);
+			} catch (SQLException e) {
+				System.out.println("Error al ejecutar sentencia " + query);
+				throw e;
+			}
+        }
+		
 	}
-	public int obtenerPrecio(int idProducto) throws RemoteException {
+	
+	public Boleta obtenerBoleta(int idBoleta) throws SQLException {
+		String query = "SELECT cajeros.nombre, cajeros.idCajero, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
+				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN cajeros USING(idCajero) WHERE idBoleta = %d";
+		query = String.format(query, idBoleta);
+		
+		Statement statement = conn.createStatement();
+		ResultSet data = statement.executeQuery(query);
+		
+		int columnCount = data.getMetaData().getColumnCount();
+		if (columnCount == 0) {
+			throw new BoletaNotFoundException(idBoleta);
+		}
+		
+		data.next();
+		String nombreCajero = data.getString("nombre");
+		int idCajero = data.getInt("idCajero");
+		Boleta boleta = new Boleta(idCajero, nombreCajero);
+		
+		do {
+			int idProducto = data.getInt("idProducto");
+			int precioTotal = data.getInt("precioTotal");
+			int cantidad = data.getInt("cantidad");
+			
+			Item item = obtenerItem(idProducto);
+			String nombreProducto = item.getNombre();
+			
+			ItemBoleta itemBoleta = new ItemBoleta(idProducto, nombreProducto, precioTotal, cantidad);
+			boleta.agregarItem(itemBoleta);
+		} while(data.next());
+		
+		return boleta;
+	}
+	
+	public void generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException, SQLException {
+		try {
+			// Empezar transacción
+			conn.setAutoCommit(false);
+			
+			// Crear idBoleta y asignar a idCajero
+			String query = "INSERT INTO boletas(idCajero) VALUES (%d)";
+			query = String.format(query, idCajero);
+			
+			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+			pstatement.executeUpdate();
+
+			ResultSet data = pstatement.getGeneratedKeys();
+			data.next();
+			int idBoleta = data.getInt(1);
+			
+			// Insertar items a la boleta
+			Statement statement = conn.createStatement();
+			String queryItem = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
+			String queryStock = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
+			String currentQuery;
+			
+			for(int i = 0; i < itemsCarrito.size(); i++) {
+				ItemCarrito itemCarrito = itemsCarrito.get(i);
+				Item item = itemCarrito.getItem();
+				Item dbItem = obtenerItem(item.getId());
+				int stock = obtenerStock(item.getId());
+				if (dbItem == null) {
+					throw new ProductNotFoundException(item.getId());
+				} else if (itemCarrito.getCantidad() > stock) {
+					throw new StockMismatchException(item.getId(), stock);
+				}
+				int cantidad = itemCarrito.getCantidad();		
+				int precioTotal = calcularPrecioTotal(item, cantidad);
+				
+				currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
+				statement.executeQuery(currentQuery);
+				
+				// Actualizar stock
+				currentQuery = String.format(queryStock, cantidad, item.getId());
+				statement.executeUpdate(currentQuery);
+			}
+			
+			// Finalizar transacción
+			conn.commit();
+		}
+		catch(Exception e) {
+
+			conn.rollback(); // Si algo falla, descartar cambios.
+			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
+
+			System.err.println(e);
+		}
+		finally {
+			conn.setAutoCommit(true);
+		}
+	}
+	
+	private int obtenerStock(int id) {
+		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException("Unimplemented method 'obtenerStock'");
+	}
+
+	private int calcularPrecioTotal(Item item, int cantidad) {
+		if(item.getCantidadPack() == 0) {
+			return cantidad * item.getPrecioDescuento();
+		}
+		int cantidadPromo = cantidad / item.getCantidadPack();
+		int resto = cantidad % item.getCantidadPack();
+		return cantidadPromo * item.getPrecioPack() + resto * item.getPrecioDescuento();
+	}
+	
+	public Item obtenerItem(int idProducto) throws APIDownException, ProductNotFoundException {
 		Map<String, String> params = new HashMap<>();
 		params.put("id", Integer.toString(idProducto));
 		HttpURLConnection conn = establishConnection("products" +  ParameterStringBuilder.getParamsString(params));
 
-
-		conn.setDoOutput(true);
-		
-			conn.setConnectTimeout(500);
-			conn.setReadTimeout(500);
+		int status = -1;
 
 		try {
-			int status = conn.getResponseCode();
-			System.out.println("Status: " + status);
+			status = conn.getResponseCode();
+			if (status != 404) {
+				throw new ElementNotFoundException();
+			}
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			String line;
 			StringBuilder content = new StringBuilder();
@@ -48,43 +251,83 @@ public class Servidor implements InterfazServidor    {
 				content.append(line);
 			}
 			in.close();
-			assert status == 200;
-			int pricePos = content.toString().indexOf("\"price\"") + 7; 
-			String sub = content.toString().substring(pricePos);
-			String subsub = sub.substring(sub.indexOf(":")+1, sub.indexOf(","));
-			return Integer.parseInt(subsub);
+			ObjectMapper om = new ObjectMapper();
+			JsonNode base = om.readTree(content.toString());
+			JsonNode commertialOffer = base.get("commertialOffer");
 
-
+			Item item = new Item(
+				idProducto,
+				commertialOffer.get("priceWithoutDiscount").asInt(),
+				commertialOffer.get("discountValue").asInt(),
+				commertialOffer.get("price").asInt(),
+				commertialOffer.get("quantity").asInt(),
+				commertialOffer.get("packPrice").asInt(),
+				base.get("productName").asText()
+			);
+			
+			return item;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			System.err.println("Error al obtener el precio del producto");
-			return -1;
+			if (status < 0) {
+				throw new APIDownException();
+			}
+			throw new APIDownException();
+		} finally {
+			conn.disconnect();
 		}
 
-		//return -1;
+
 	}
-	public int obtenerBoleta(int idBoleta) throws RemoteException {
-		return 0;
-	}
+	
 	public int modificarStock(int idProducto, int cantidad) throws RemoteException {
 		return 0;
 	}
-	
+
 	private HttpURLConnection establishConnection(String path) {
 		try {
-			URL apiUrl  = new URL(apiUrlString + "/" + path);
-			HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
+			URI apiUrl = new URI(apiUrlString + "/" + path);
+			HttpURLConnection conn = (HttpURLConnection) apiUrl.toURL().openConnection();
 			conn.setRequestMethod("GET");
+			conn.setDoOutput(true);
+			conn.setConnectTimeout(500);
+			conn.setReadTimeout(500);
 			return conn;
-		} catch (MalformedURLException e) {
+		} catch (URISyntaxException | IOException e) {
 			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API");
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API");
+			System.err.println("Error al crear la conexion a la API (URL malformada)");
 		}
 		return null;
 	}
 
+	private Connection createConnection() throws SQLException {
+		Connection conn = null;
+		Properties connectionProps = new Properties();
+
+		connectionProps.put("user", "root");
+		connectionProps.put("password", "");
+		try {
+			conn = java.sql.DriverManager.getConnection("jdbc:mariadb://localhost:3306/", connectionProps);
+		} catch (SQLException e) {
+			System.err.println("Error al conectar a la base de datos");
+			throw e;
+		}
+		return conn;
+	}
+	
+	private String readFile(String path) throws IOException {
+        StringBuilder contenido = new StringBuilder();
+
+        File archivo = new File(path);
+        FileReader fr = new FileReader(archivo);
+        BufferedReader br = new BufferedReader(fr);
+
+        String linea;
+        while ((linea = br.readLine()) != null) {
+            contenido.append(linea);
+            contenido.append("\n");
+        }
+
+        br.close();
+
+        return contenido.toString();
+	}
 }
