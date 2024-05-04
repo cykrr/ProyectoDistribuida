@@ -209,18 +209,23 @@ public class Servidor implements InterfazServidor {
 		catch(Exception e) {
 
 			conn.rollback(); // Si algo falla, descartar cambios.
+			System.err.println(e);
 			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
 
-			System.err.println(e);
 		}
 		finally {
 			conn.setAutoCommit(true);
 		}
 	}
 	
-	private int obtenerStock(int id) {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'obtenerStock'");
+	private int obtenerStock(int id) throws SQLException, ProductNotFoundException {
+		Statement s = conn.createStatement();
+		String q = "SELECT stock FROM stock WHERE idProducto = " + id;
+		ResultSet rs = s.executeQuery(q);
+		if (!rs.next()) {
+			throw new ProductNotFoundException(id);
+		}
+		return rs.getInt("stock");
 	}
 
 	private int calcularPrecioTotal(Item item, int cantidad) {
