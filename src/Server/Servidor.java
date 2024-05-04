@@ -19,8 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-//import org.mariadb.jdbc.DatabaseMetaData;
-
 // import JSON Jackson core
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -209,18 +207,23 @@ public class Servidor implements InterfazServidor {
 		catch(Exception e) {
 
 			conn.rollback(); // Si algo falla, descartar cambios.
+			System.err.println(e);
 			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
 
-			//System.err.println(e);
 		}
 		finally {
 			conn.setAutoCommit(true);
 		}
 	}
 	
-	private int obtenerStock(int id) {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("Unimplemented method 'obtenerStock'");
+	private int obtenerStock(int id) throws SQLException, ProductNotFoundException {
+		Statement s = conn.createStatement();
+		String q = "SELECT stock FROM stock WHERE idProducto = " + id;
+		ResultSet rs = s.executeQuery(q);
+		if (!rs.next()) {
+			throw new ProductNotFoundException(id);
+		}
+		return rs.getInt("stock");
 	}
 
 	private int calcularPrecioTotal(Item item, int cantidad) {
@@ -241,8 +244,8 @@ public class Servidor implements InterfazServidor {
 
 		try {
 			status = conn.getResponseCode();
-			if (status != 404) {
-				//throw new ElementNotFoundException();
+			if (status == 404) {
+				throw new ProductNotFoundException(idProducto);
 			}
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			String line;
