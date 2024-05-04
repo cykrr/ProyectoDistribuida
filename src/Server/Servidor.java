@@ -185,11 +185,13 @@ public class Servidor implements InterfazServidor {
 				Item item = itemCarrito.getItem();
 				Item dbItem = obtenerItem(item.getId());
 				int stock = obtenerStock(item.getId());
+
 				if (dbItem == null) {
 					throw new ProductNotFoundException(item.getId());
 				} else if (itemCarrito.getCantidad() > stock) {
 					throw new StockMismatchException(item.getId(), stock);
 				}
+
 				int cantidad = itemCarrito.getCantidad();		
 				int precioTotal = calcularPrecioTotal(item, cantidad);
 				
@@ -244,7 +246,7 @@ public class Servidor implements InterfazServidor {
 
 		try {
 			status = conn.getResponseCode();
-			if (status != 404) {
+			if (status == 404) {
 				throw new ProductNotFoundException(idProducto);
 			}
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
