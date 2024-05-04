@@ -216,7 +216,7 @@ public class Servidor implements InterfazServidor {
 		}
 	}
 	
-	private int obtenerStock(int id) throws SQLException, ProductNotFoundException {
+	public int obtenerStock(int id) throws SQLException, ProductNotFoundException {
 		Statement s = conn.createStatement();
 		String q = "SELECT stock FROM stock WHERE idProducto = " + id;
 		ResultSet rs = s.executeQuery(q);

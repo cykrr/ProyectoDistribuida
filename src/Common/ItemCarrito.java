@@ -1,6 +1,16 @@
 package Common;
 
-public class ItemCarrito {
+import java.io.Serializable;
+
+public class ItemCarrito implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4376263176805318571L;
+	/**
+	 * 
+	 */
+	//private static final long serialVersionUID = 1L;
 	private Item item;
 	private int cantidad;
 	

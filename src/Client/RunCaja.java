@@ -14,29 +14,55 @@ import Common.ItemCarrito;
 public class RunCaja {
 
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, SQLException {
+		
+		Caja caja = null;
+		Administrador admin = null;
+		
+        int idUsuario = -1;
+        boolean esAdmin = false;
         
-        Caja caja = null;
-        
-        try {
-        	caja = new Caja();
-        }catch(RemoteException e) {
-        	System.out.print("No se encontró el servidor");
-        }
-        
-        
-        int idCajero = 123;
-            
-		//Cliente cliente = new Cliente();
 		ArrayList<ItemCarrito> carrito = new ArrayList<>();
 		
-		////////Variables para leer porque no sé hacerlo de forma más eficiente/////
+		////////Variables para leer/////
 		
 		int id = 0;
 		int cantidad = 0;
+		int clave = 0;
 		
-		//////////////////////////////////////////////////////////////////////////
+		/////////////////////////////////
 		
 		Scanner scanner = new Scanner(System.in);
+		
+		while (idUsuario == -1) {
+			System.out.println("Inicio de sesión");
+			System.out.println("Ingrese id:");
+			id = scanner.nextInt();
+			
+			System.out.print("Ingrese clave: ");
+			clave = scanner.nextInt();
+			
+			//Validación de admin provisional, hay que cambiarlo
+			if(id == 3) {
+				esAdmin = true;
+			}
+			//Pendiente: Validar si existe usuario
+			
+			idUsuario = id;
+		}
+		
+		if(!esAdmin) {
+	        try {
+	        	caja = new Caja();
+	        }catch(RemoteException e) {
+	        	System.out.print("No se encontró el servidor");
+	        }
+		}else {
+			try {
+	        	admin = new Administrador();
+	        }catch(RemoteException e) {
+	        	System.out.print("No se encontró el servidor");
+	        }
+		}
 		
 		while (true) {
 			System.out.println("\nPor favor, elige una opción:");
@@ -86,7 +112,7 @@ public class RunCaja {
 					break;
 				
 				case 5:
-					caja.finalizarVenta(carrito, idCajero);
+					caja.finalizarVenta(carrito, idUsuario);
 					carrito = new ArrayList<>();
 					break;
 					

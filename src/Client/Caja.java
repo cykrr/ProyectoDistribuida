@@ -23,12 +23,21 @@ public class Caja extends Cliente {
 		
 		for (ItemCarrito elemento : caja) {
 			if(elemento.getItem().getId() == id) {
-				elemento.setCantidad(elemento.getCantidad()+cantidad);
-				return caja;
+				if(elemento.getItem().getCantidadPack() >= elemento.getCantidad()+cantidad) {
+					elemento.setCantidad(elemento.getCantidad()+cantidad);
+					return caja;
+				}else {
+					System.out.println("No hay stock suficiente");
+					return caja;
+				}
 			}
 		}
 		ItemCarrito item = new ItemCarrito(servidor.obtenerItem(id),cantidad);
-		caja.add(item);
+		if(item.getItem().getCantidadPack() >= cantidad) {
+			caja.add(item);
+		}else {
+			System.out.println("No hay stock suficiente");
+		}
 		return caja;
 	}
 	
@@ -36,6 +45,7 @@ public class Caja extends Cliente {
 		try {
 			Item item = servidor.obtenerItem(id);
 			System.out.println("\nNombre:" + item.getNombre());
+			System.out.println("Cantidad disponible: "+ item.getCantidadPack());
 			System.out.println("Precio base: "+ item.getPrecio());
 			if(item.getDescuento() == 1) {
 				System.out.println("Precio con descuento: "+ item.getPrecioDescuento());
@@ -67,8 +77,8 @@ public class Caja extends Cliente {
 		int total = 0;
 		System.out.println("\n Resumen boleta:");
 		for (ItemCarrito elemento : caja) {
-		    System.out.println("-" + elemento.getItem().getNombre() + " x" + elemento.getCantidad() + " total:" + elemento.getCantidad()*elemento.getItem().getPrecio() + "$");
-		    total += elemento.getCantidad()*elemento.getItem().getPrecio();
+		    System.out.println("-" + elemento.getItem().getNombre() + " x" + elemento.getCantidad() + " total:" + elemento.getCantidad()*elemento.getItem().getPrecioDescuento() + "$");
+		    total += elemento.getCantidad()*elemento.getItem().getPrecioDescuento();
 		}
 		if(total == 0) {
 			System.out.println("Carrito vacío");
