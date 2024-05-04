@@ -245,7 +245,7 @@ public class Servidor implements InterfazServidor {
 		try {
 			status = conn.getResponseCode();
 			if (status != 404) {
-				throw new ElementNotFoundException();
+				throw new ProductNotFoundException(idProducto);
 			}
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			String line;
