@@ -17,6 +17,7 @@ import java.util.Map;
 import Common.InterfazServidor;
 import Common.Boleta;
 
+@SuppressWarnings("unused")
 public class Servidor implements InterfazServidor    {
 	static private String apiUrlString = "http://localhost:5000";
 
