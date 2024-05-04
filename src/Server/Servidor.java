@@ -19,8 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import org.mariadb.jdbc.DatabaseMetaData;
-
 // import JSON Jackson core
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
