@@ -19,7 +19,7 @@ public class Administrador extends Cliente {
 		int cantidad = 0;
 		
 		while (idUsuario !=- 1) {
-			System.out.println("----El usuario " + idUsuario+ " a iniciado sesión----");
+			System.out.println("----El administrador " + idUsuario+ " a iniciado sesión----");
 			System.out.println("\nPor favor, elija una opción:");
 			System.out.println("1. Añadir stock a producto");
 			System.out.println("2. Eliminar stock a producto");
@@ -37,8 +37,12 @@ public class Administrador extends Cliente {
 					
 					System.out.print("Ingrese cantidad: ");
 					cantidad = scanner.nextInt();
+					while(cantidad <=0) {
+						System.out.print("Ingrese valores mayores a 0 \nIntente nuevamente: ");
+						cantidad = scanner.nextInt();
+					}
 					
-					//carrito = caja.agregarItem(carrito, id, cantidad);
+					//Método para módificar stock
 					break;
 					
 				case 2:
@@ -47,8 +51,10 @@ public class Administrador extends Cliente {
 					
 					System.out.print("Ingrese cantidad a eliminar: ");
 					cantidad = scanner.nextInt();
-					
-					//carrito = caja.eliminarItem(carrito, id, cantidad);
+					while(cantidad <=0) {
+						System.out.print("Ingrese valores mayores a 0 \nIntente nuevamente: ");
+						cantidad = scanner.nextInt();
+					}
 					break;
 					
 				case 3:
@@ -57,7 +63,6 @@ public class Administrador extends Cliente {
 					Item item = servidor.obtenerItem(id);
 					System.out.println("\nNombre:" + item.getNombre());
 					System.out.println("Cantidad disponible: " + item.getCantidadPack());
-					//caja.consultarItem(id);
 					break;
 					
 					
