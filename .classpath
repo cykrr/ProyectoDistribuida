@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="lib" path="lib/json.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="https://stleary.github.io/JSON-java/"/>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="lib/mariadb-java-client-3.3.3.jar">
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/byte-buddy-1.14.14.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-core-2.17.0.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -30,10 +27,8 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/Bryam/Documents/GitHub/ProyectoDistribuida/lib/waffle-jna-3.2.0.jar">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry kind="lib" path="lib/mariadb-java-client-3.3.3.jar"/>
+	<classpathentry kind="lib" path="lib/byte-buddy-1.14.14.jar"/>
+	<classpathentry kind="lib" path="lib/waffle-jna-3.2.0.jar"/>
 	<classpathentry kind="output" path="lib/default"/>
 </classpath>

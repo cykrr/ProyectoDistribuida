@@ -11,6 +11,7 @@ import Common.Item;
 import Common.ItemCarrito;
 
 
+@SuppressWarnings("unused")
 public class RunCaja {
 
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, SQLException {
@@ -49,8 +50,8 @@ public class RunCaja {
 			System.out.println("4. Consultar carrito");
 			System.out.println("5. Finalizar venta");
 			System.out.println("6. Iniciar sesión");
-			System.out.println("7. Cerrar sesión");
-			System.out.println("8. Salir");
+			System.out.println("9. Cerrar sesión");
+			System.out.println("0. Salir");
 			System.out.print("Opción: ");
 			
 			int opcion = scanner.nextInt();
@@ -58,7 +59,7 @@ public class RunCaja {
 			switch (opcion) {
 			
 				case 1:
-					System.out.print("\nIngrese id: ");
+					System.out.print("\nIngrese id del producto: ");
 					id = scanner.nextInt();
 					
 					System.out.print("Ingrese cantidad: ");
@@ -69,17 +70,17 @@ public class RunCaja {
 					
 				case 2:
 					
-					System.out.print("\nIngrese id: ");
+					System.out.print("\nIngrese id del producto: ");
 					id = scanner.nextInt();
 					caja.consultarItem(id);
 					break;
 					
 				case 3:
 					
-					System.out.print("\nIngrese id: ");
+					System.out.print("\nIngrese id del producto: ");
 					id = scanner.nextInt();
 					
-					System.out.print("Ingrese cantidad: ");
+					System.out.print("Ingrese cantidad a eliminar: ");
 					cantidad = scanner.nextInt();
 					
 					carrito = caja.eliminarItem(carrito, id, cantidad);
@@ -108,11 +109,15 @@ public class RunCaja {
 					clave = scanner.nextInt();
 					
 					if(caja.logIn(id,clave)) {
-						if(id == 3) {
-							esAdmin = true;
-						}
+						esAdmin = true;
+						
+					}
+					if(esAdmin == true) {
 						idUsuario = id;
-					}		
+						Administrador administrador = new Administrador();
+						administrador.menu(idUsuario);
+					}
+					
 					break;
 					
 				case 7:
