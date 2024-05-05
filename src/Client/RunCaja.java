@@ -16,7 +16,11 @@ public class RunCaja {
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, SQLException {
 		
 		Caja caja = null;
-		Administrador admin = null;
+		try {
+        	caja = new Caja();
+        }catch(RemoteException e) {
+        	System.out.print("No se encontró el servidor");
+        }
 		
         int idUsuario = -1;
         boolean esAdmin = false;
@@ -33,45 +37,20 @@ public class RunCaja {
 		
 		Scanner scanner = new Scanner(System.in);
 		
-		while (idUsuario == -1) {
-			System.out.println("Inicio de sesión");
-			System.out.println("Ingrese id:");
-			id = scanner.nextInt();
-			
-			System.out.print("Ingrese clave: ");
-			clave = scanner.nextInt();
-			
-			//Validación de admin provisional, hay que cambiarlo
-			if(id == 3) {
-				esAdmin = true;
-			}
-			//Pendiente: Validar si existe usuario
-			
-			idUsuario = id;
-		}
-		
-		if(!esAdmin) {
-	        try {
-	        	caja = new Caja();
-	        }catch(RemoteException e) {
-	        	System.out.print("No se encontró el servidor");
-	        }
-		}else {
-			try {
-	        	admin = new Administrador();
-	        }catch(RemoteException e) {
-	        	System.out.print("No se encontró el servidor");
-	        }
-		}
 		
 		while (true) {
+			if(idUsuario == -1) {
+				System.out.println("----No se ha iniciado sesión----");
+			}
 			System.out.println("\nPor favor, elige una opción:");
 			System.out.println("1. Agregar producto");
 			System.out.println("2. Consultar producto");
 			System.out.println("3. Eliminar producto");
 			System.out.println("4. Consultar carrito");
 			System.out.println("5. Finalizar venta");
-			System.out.println("6. Salir");
+			System.out.println("6. Iniciar sesión");
+			System.out.println("7. Cerrar sesión");
+			System.out.println("8. Salir");
 			System.out.print("Opción: ");
 			
 			int opcion = scanner.nextInt();
@@ -112,11 +91,42 @@ public class RunCaja {
 					break;
 				
 				case 5:
-					caja.finalizarVenta(carrito, idUsuario);
-					carrito = new ArrayList<>();
+					if(idUsuario != -1) {
+						caja.finalizarVenta(carrito, idUsuario);
+						carrito = new ArrayList<>();
+					}else {
+						System.out.println("Inicie sesión para concretar venta");
+					}
+					break;
+				
+				case 6:
+					System.out.println("Inicio de sesión");
+					System.out.println("Ingrese id:");
+					id = scanner.nextInt();
+					
+					System.out.print("Ingrese clave: ");
+					clave = scanner.nextInt();
+					
+					if(caja.logIn(id,clave)) {
+						if(id == 3) {
+							esAdmin = true;
+						}
+						idUsuario = id;
+					}		
 					break;
 					
-				case 6:
+				case 7:
+					
+					if(carrito.size() == 0) {
+						idUsuario = -1;
+						System.out.print("Sesión cerrada\n");
+					}else {
+						System.out.print("No puede cerrar sesión con una venta en proceso");
+					}
+					break;
+					
+					
+				case 8:
 					System.out.println("Saliendo...");
 					scanner.close();
 					System.exit(0);

@@ -18,7 +18,12 @@ public class Caja extends Cliente {
 	public Caja() throws RemoteException, NotBoundException {
 		super();
 	}
-
+	
+	public boolean logIn(int id, int clave) {
+		//Pendiente: Validar si existe usuario
+		return true;
+	}
+	
 	public ArrayList<ItemCarrito> agregarItem(ArrayList<ItemCarrito> caja, int id, int cantidad) throws RemoteException{
 		
 		for (ItemCarrito elemento : caja) {
