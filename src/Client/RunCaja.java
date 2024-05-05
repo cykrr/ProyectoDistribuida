@@ -118,9 +118,10 @@ public class RunCaja {
 						administrador.menu(idUsuario);
 					}
 					
+					idUsuario = -1;
 					break;
 					
-				case 7:
+				case 9:
 					
 					if(carrito.size() == 0) {
 						idUsuario = -1;
@@ -131,7 +132,7 @@ public class RunCaja {
 					break;
 					
 					
-				case 8:
+				case 0:
 					System.out.println("Saliendo...");
 					scanner.close();
 					System.exit(0);
