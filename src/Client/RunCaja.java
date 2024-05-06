@@ -45,7 +45,7 @@ public class RunCaja {
 		Scanner scanner = new Scanner(System.in);
 
 
-		while (true) {
+		outerloop: while (true) {
 			if(caja.usuario.getId() < 0) {
 				System.out.println("----No se ha iniciado sesión----");
 				System.out.println("6. Iniciar sesión");
@@ -65,8 +65,8 @@ public class RunCaja {
 			
 			
 			int opcion = scanner.nextInt();
-			if(opcion < 0) {
-				System.out.println("Recuerde ingresar valores válidos");
+			if(caja.usuario.getId() < 0 && opcion!=6 && opcion!=0) {
+				continue outerloop;
 			}
 			
 			switch (opcion) {
