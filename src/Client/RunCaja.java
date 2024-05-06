@@ -7,23 +7,29 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import Common.APIDownException;
 import Common.Item;
 import Common.ItemCarrito;
+import Common.ProductNotFoundException;
 
 
 @SuppressWarnings("unused")
 public class RunCaja {
+	public boolean finalizarVenta;
 
-	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, SQLException {
+	public static void main(String[] args) {
 		
 		Caja caja = null;
 		try {
         	caja = new Caja();
         }catch(RemoteException e) {
-        	System.out.print("No se encontró el servidor");
-        }
+        	System.out.println("No se encontró el servidor");
+			return;
+        } catch (NotBoundException e) {
+			System.out.println("No se encontró el servidor");
+			return;
+		}
 		
-        int idUsuario = -1;
         boolean esAdmin = false;
         
 		ArrayList<ItemCarrito> carrito = new ArrayList<>();
@@ -39,24 +45,24 @@ public class RunCaja {
 		Scanner scanner = new Scanner(System.in);
 		
 		
+		if (caja == null) {
+			System.out.println("No se pudo conectar al servidor");
+			return;
+		}
 		while (true) {
-			if(idUsuario == -1) {
+			if(caja.usuario.getId() < 0) {
 				System.out.println("----No se ha iniciado sesión----");
-			}else {
-				System.out.println("---Sesión iniciada con id: " + idUsuario + "----");
-			}
-			System.out.println("\nPor favor, elige una opción:");
-			System.out.println("1. Agregar producto al carrito");
-			System.out.println("2. Consultar producto");
-			System.out.println("3. Eliminar producto del carrito");
-			System.out.println("4. Consultar carrito");
-			if(idUsuario != -1) {
+			} else {
+				System.out.println("---Sesión iniciada con id: " + caja.usuario.getNombre() + "----");
+				System.out.println("\nPor favor, elige una opción:");
+				System.out.println("1. Agregar producto al carrito");
+				System.out.println("2. Consultar producto");
+				System.out.println("3. Eliminar producto del carrito");
+				System.out.println("4. Consultar carrito");
 				System.out.println("5. Finalizar venta");
-			}
-			System.out.println("6. Iniciar sesión");
-			if(idUsuario != -1) {
 				System.out.println("9. Cerrar sesión");
 			}
+			System.out.println("6. Iniciar sesión");
 			System.out.println("0. Salir");
 			System.out.print("Opción: ");
 			
@@ -69,6 +75,11 @@ public class RunCaja {
 			switch (opcion) {
 			
 				case 1:
+					if (caja.usuario.getId() < 0) {
+						System.out.println("Inicie sesión para consultar productos");
+						break;
+					}
+
 					System.out.print("\nIngrese id del producto: ");
 					id = scanner.nextInt();
 					
@@ -78,18 +89,40 @@ public class RunCaja {
 						System.out.print("Ingrese valores mayores a 0 \nIntente nuevamente: ");
 						cantidad = scanner.nextInt();
 					}
-					
-					carrito = caja.agregarItem(carrito, id, cantidad);
+					try {
+						caja.agregarItem(carrito, id, cantidad);
+
+					} catch (APIDownException e) {
+						System.out.println("No se pudo obtener el precio del producto");
+					} catch (RemoteException e) {
+						System.out.println("No se pudo contactar el Servidor");
+					} catch (Exception e ) {
+						System.err.println("Ocurrió un error. Intente nuevamente");
+					}
 					break;
 					
 				case 2:
+					if (caja.usuario == null) {
+						System.out.println("Inicie sesión para continuar");
+						break;
+					}
 					
 					System.out.print("\nIngrese id del producto: ");
 					id = scanner.nextInt();
-					caja.consultarItem(id);
+					try {
+						caja.consultarItem(id);
+
+					} catch (ProductNotFoundException e) {
+						e.printStackTrace();
+					}
+
 					break;
 					
 				case 3:
+					if (caja.usuario == null) {
+						System.out.println("Inicie sesión para continuar");
+						break;
+					}
 					
 					System.out.print("\nIngrese id del producto: ");
 					id = scanner.nextInt();
@@ -106,17 +139,37 @@ public class RunCaja {
 					break;
 					
 				case 4:
+					if (caja.usuario == null) {
+						System.out.println("Inicie sesión para continuar");
+						break;
+					}
 					
-					caja.consultarCarrito(carrito);
+					try {
+						caja.consultarCarrito(carrito);
+					} catch (RemoteException e) {
+						System.out.println("No se pudo consultar el carrito");
+						e.printStackTrace();
+					}
 					break;
 				
 				case 5:
-					if(idUsuario != -1) {
-						caja.finalizarVenta(carrito, idUsuario);
-						carrito = new ArrayList<>();
-					}else {
-						System.out.println("Inicie sesión para concretar venta");
+					if (caja.usuario == null) {
+						System.out.println("Inicie sesión para consultar productos");
+						break;
 					}
+						if (caja.usuario != null) {
+							try {
+								caja.finalizarVenta(carrito, caja.usuario.getId());
+							} catch (RemoteException e) {
+								System.out.println("No se pudo contactar al servidor");
+								e.printStackTrace();
+							} catch (SQLException e) {
+								System.out.println("No se pudo finalizar la venta");
+								e.printStackTrace();
+							}
+						} else {
+							System.out.println("Inicie sesión para concretar venta");
+						}
 					break;
 				
 				case 6:
@@ -126,28 +179,15 @@ public class RunCaja {
 					
 					System.out.print("Ingrese clave: ");
 					clave = scanner.nextInt();
-					
-					if(caja.logIn(id,clave)) {
-						esAdmin = true;	
-					}
-					if(esAdmin == true) {
-						idUsuario = id;
-						Administrador administrador = new Administrador();
-						administrador.menu(idUsuario);
-						idUsuario = 1;
-					}
-					
-					
+					caja.logIn(id,clave);
 					break;
 					
 				case 9:
-					
-					if(carrito.size() == 0) {
-						idUsuario = -1;
-						System.out.print("Sesión cerrada\n");
-					}else {
-						System.out.print("No puede cerrar sesión con una venta en proceso");
+					if (caja.usuario == null) {
+						System.out.println("Inicie sesión para cerrar sesión");
+						break;
 					}
+					caja.usuario = null;
 					break;
 					
 					

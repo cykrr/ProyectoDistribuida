@@ -7,46 +7,61 @@ import java.rmi.registry.Registry;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import Common.APIDownException;
 import Common.Boleta;
 import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemCarrito;
 import Common.ProductNotFoundException;
+import Common.Usuario;
 
 public class Caja extends Cliente {
+	protected Usuario usuario;
+
+	public Usuario getUsuario() {
+		return usuario;
+	}
 
 	public Caja() throws RemoteException, NotBoundException {
 		super();
+		this.usuario = new Usuario(-1, "nadie", -1);
 	}
 	
 	public boolean logIn(int id, int clave) {
-		//Pendiente: Validar si existe usuario
-		return true;
+		try {
+			System.out.println("Iniciando sesión");
+			Usuario usuario = servidor.logIn(id, clave);
+			if (usuario == null) {
+				System.out.println("Credenciales incorrectas");
+				return false;
+			}
+			this.usuario = usuario;
+			return true;
+		} catch (RemoteException e) {
+			System.out.println("No se pudo iniciar sesión");
+			e.printStackTrace();
+			this.usuario = null;
+			return false;
+		}
 	}
 	
-	public ArrayList<ItemCarrito> agregarItem(ArrayList<ItemCarrito> caja, int id, int cantidad) throws RemoteException{
-		
+	public ArrayList<ItemCarrito> agregarItem(ArrayList<ItemCarrito> caja, int id, int cantidad) throws RemoteException, APIDownException, ProductNotFoundException{
 		for (ItemCarrito elemento : caja) {
 			if(elemento.getItem().getId() == id) {
-				if(elemento.getItem().getCantidadPack() >= elemento.getCantidad()+cantidad) {
-					elemento.setCantidad(elemento.getCantidad()+cantidad);
-					return caja;
-				}else {
-					System.out.println("No hay stock suficiente");
-					return caja;
-				}
+				elemento.setCantidad(elemento.getCantidad()+cantidad);
+				System.out.println("Agregado " + elemento.getItem().getNombre() + "x" + cantidad);
+				return caja;
 			}
 		}
-		ItemCarrito item = new ItemCarrito(servidor.obtenerItem(id),cantidad);
-		if(item.getItem().getCantidadPack() >= cantidad) {
-			caja.add(item);
-		}else {
-			System.out.println("No hay stock suficiente");
-		}
+		
+		Item item = servidor.obtenerItem(id);
+
+		ItemCarrito itemCarrito = new ItemCarrito(item,cantidad);
+		caja.add(itemCarrito);
 		return caja;
 	}
 	
-	public void consultarItem(int id) throws RemoteException{
+	public void consultarItem(int id) {
 		try {
 			Item item = servidor.obtenerItem(id);
 			System.out.println("\nNombre:" + item.getNombre());
@@ -56,8 +71,12 @@ public class Caja extends Cliente {
 				System.out.println("Precio con descuento: "+ item.getPrecioDescuento());
 			}
 		}catch(ProductNotFoundException e){
-			System.out.println("No se pudo obtener el item");
-			throw e;
+			System.out.println("No se encontró el item " + id );
+		} catch (APIDownException e) {
+			System.out.println("No se pudo establecer conexión con la API");
+		} catch (RemoteException e) {
+			System.out.println("No se pudo obtener el item " + id);
+			e.printStackTrace();
 		}
 	}
 	
@@ -93,8 +112,13 @@ public class Caja extends Cliente {
 	}
 	
 	public void finalizarVenta(ArrayList<ItemCarrito> caja, int idCajero) throws RemoteException, SQLException {
+		if (this.usuario == null) {
+			System.out.println("Inicie sesión para concretar venta");
+			return;
+		}
+
 		servidor.generarBoleta(caja, idCajero);
-		System.out.println("Gacias por comprar!");
+		System.out.println("Gracias por comprar!");
 	}
 	
 }
