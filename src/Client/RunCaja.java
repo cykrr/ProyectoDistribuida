@@ -37,26 +37,47 @@ public class RunCaja {
 		/////////////////////////////////
 		
 		Scanner scanner = new Scanner(System.in);
-		
-		
-		while (true) {
-			if(idUsuario == -1) {
-				System.out.println("----No se ha iniciado sesión----");
+		System.out.println("Inicie Sesión para continuar...\n");
+		while(true) {
+			
+			System.out.println("Ingrese id:");
+			id = scanner.nextInt();
+			
+			System.out.print("Ingrese clave: ");
+			clave = scanner.nextInt();
+			
+			if(caja.logIn(id,clave) == true) {
+				esAdmin = false;
+				if(esAdmin == true) {
+					idUsuario = id;
+					Administrador administrador = new Administrador();
+					administrador.menu(idUsuario);
+					
+				}else {
+					idUsuario=id;
+					break;
+					//System.out.println("Error al iniciar sesión...\nIntente nuevamente.\n");
+				}
 			}else {
-				System.out.println("---Sesión iniciada con id: " + idUsuario + "----");
+				System.out.println("Usuario no encontrado.\n\nVerifique que los datos sean correctos.\nIntente de nuevo.");
 			}
+			
+		}
+		
+		
+		
+		while (idUsuario != -1) {
+			
+			System.out.println("---Sesión iniciada con id: " + idUsuario + "----");
+			
 			System.out.println("\nPor favor, elige una opción:");
+			
 			System.out.println("1. Agregar producto al carrito");
 			System.out.println("2. Consultar producto");
 			System.out.println("3. Eliminar producto del carrito");
 			System.out.println("4. Consultar carrito");
-			if(idUsuario != -1) {
-				System.out.println("5. Finalizar venta");
-			}
-			System.out.println("6. Iniciar sesión");
-			if(idUsuario != -1) {
-				System.out.println("9. Cerrar sesión");
-			}
+			System.out.println("5. Finalizar venta");
+			System.out.println("9. Cerrar sesión"); //Esta opción no estaria valida, ya que o se cierra el programa o se queda en blanco
 			System.out.println("0. Salir");
 			System.out.print("Opción: ");
 			
@@ -117,27 +138,6 @@ public class RunCaja {
 					}else {
 						System.out.println("Inicie sesión para concretar venta");
 					}
-					break;
-				
-				case 6:
-					System.out.println("Inicio de sesión");
-					System.out.println("Ingrese id:");
-					id = scanner.nextInt();
-					
-					System.out.print("Ingrese clave: ");
-					clave = scanner.nextInt();
-					
-					if(caja.logIn(id,clave)) {
-						esAdmin = true;	
-					}
-					if(esAdmin == true) {
-						idUsuario = id;
-						Administrador administrador = new Administrador();
-						administrador.menu(idUsuario);
-						idUsuario = 1;
-					}
-					
-					
 					break;
 					
 				case 9:
