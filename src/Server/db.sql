@@ -4,16 +4,18 @@ CREATE DATABASE IF NOT EXISTS app_tienda;
 
 USE app_tienda;
 
-CREATE TABLE IF NOT EXISTS cajeros (
-    idCajero INT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS usuarios (
+    idUsuario INT PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
-    clave INT NOT NULL
+    clave INT NOT NULL,
+    rol INT NOT NULL
+
 );
 
 CREATE TABLE IF NOT EXISTS boletas (
     idBoleta INT AUTO_INCREMENT PRIMARY KEY,
-    idCajero INT NOT NULL,
-    FOREIGN KEY (idCajero) REFERENCES cajeros(idCajero)
+    idUsuario INT NOT NULL,
+    FOREIGN KEY (idUsuario) REFERENCES usuarios(idUsuario)
 );
 
 CREATE TABLE IF NOT EXISTS itemsBoleta (
@@ -31,15 +33,15 @@ CREATE TABLE IF NOT EXISTS stock (
 );
 
 
-INSERT IGNORE INTO cajeros
-    (idCajero, nombre, clave)
+INSERT IGNORE INTO usuarios
+    (idUsuario, nombre, clave, rol)
 VALUES
-    (1, 'Juan', 11111),
-    (2, 'Pepito', 22222),
-    (3, 'Miguel', 33333);
+    (1, 'Juan', 11111, 0),
+    (2, 'Pepito', 22222, 1),
+    (3, 'Miguel', 33333, 0);
 
 INSERT IGNORE INTO boletas
-    (idBoleta, idCajero)
+    (idBoleta, idUsuario)
 VALUES
     (1, 1),
     (2, 1);
