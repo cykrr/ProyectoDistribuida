@@ -1,9 +1,12 @@
 package Common;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class Boleta {
+public class Boleta implements Serializable {
+	private static final long serialVersionUID = 1L;
+	
 	private ArrayList<ItemBoleta> items;
 	private String nombreCajero;
 	private int idCajero;

@@ -1,6 +1,10 @@
 package Common;
 
-public class ItemBoleta {
+import java.io.Serializable;
+
+public class ItemBoleta implements Serializable {
+	private static final long serialVersionUID = 1L;
+	
 	private int idProducto;
 	private String nombreProducto;
 	private int precioTotal; // Precio final después de aplicar descuentos/promociones

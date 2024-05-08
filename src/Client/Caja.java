@@ -29,7 +29,7 @@ public class Caja {
 		for (ItemCarrito elemento : carrito) {
 			if(elemento.getItem().getId() == id) {
 				elemento.setCantidad(elemento.getCantidad() + cantidad);
-				System.out.println("Se agregaron " + cantidad + " x " + elemento.getItem().getNombre() + "\n");
+				System.out.println("Se agregó " + cantidad + " x " + elemento.getItem().getNombre() + "\n");
 			}
 		}
 		
@@ -77,9 +77,9 @@ public class Caja {
 				elemento.setCantidad(elemento.getCantidad() - cantidad);
 				if(elemento.getCantidad() <= 0) {
 					carrito.remove(elemento);
-					System.out.println("Se eliminó el producto " + elemento.getItem().getNombre());
+					System.out.println("Se eliminó el producto " + elemento.getItem().getNombre() + "\n");
 				} else {
-					System.out.println("Se eliminó " + cantidad + " x " + elemento.getItem().getNombre());
+					System.out.println("Se eliminó " + cantidad + " x " + elemento.getItem().getNombre() + "\n");
 				}
 				return;
 			}
@@ -103,7 +103,8 @@ public class Caja {
 	
 	public void finalizarVenta() {
 		try {
-			servidor.generarBoleta(carrito, usuario.getId());
+			int idBoleta = servidor.generarBoleta(carrito, usuario.getId());
+			System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
 			System.out.println("¡Gracias por comprar!\n");
 		} catch (RemoteException | SQLException e) {
 			System.out.println("Ocurrió un error al generar la boleta\n");

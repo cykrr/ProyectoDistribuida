@@ -1,8 +1,17 @@
 package Client;
 
+import java.rmi.RemoteException;
+import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.Scanner;
 
+import Common.APIDownException;
+import Common.Boleta;
+import Common.BoletaNotFoundException;
 import Common.InterfazServidor;
+import Common.Item;
+import Common.ItemBoleta;
+import Common.ProductNotFoundException;
 import Common.Usuario;
 
 public class Administrador {
@@ -17,19 +26,70 @@ public class Administrador {
 	}
 	
 	public void agregarStock(int id, int cantidad) {
-		
+		try {
+			servidor.agregarStock(id, cantidad);
+			System.out.println("Stock actualizado con éxito\n");
+		} catch (RemoteException e) {
+			System.out.println("Ocurrió un error en la conexión con el servidor\n");
+		} catch (ProductNotFoundException e) {
+			System.out.println("No se encontró el item con ID " + id + "\n");
+		} catch (SQLException e) {
+			System.out.println("No se pudo establecer conexión con la base de datos\n");
+		}
 	}
 	
 	public void eliminarStock(int id, int cantidad) {
-		
+		try {
+			servidor.eliminarStock(id, cantidad);
+			System.out.println("Stock actualizado con éxito\n");
+		} catch (RemoteException e) {
+			System.out.println("Ocurrió un error en la conexión con el servidor\n");
+		} catch (ProductNotFoundException e) {
+			System.out.println("No se encontró el item con ID " + id + "\n");
+		} catch (SQLException e) {
+			System.out.println("No se pudo establecer conexión con la base de datos\n");
+		}
 	}
 	
 	public void consultarStock(int id) {
-		
+		try {
+			int stock = servidor.obtenerStock(id);
+			Item item = servidor.obtenerItem(id);
+			
+			System.out.println("Producto: " + item.getNombre());
+			System.out.println("Stock: " + stock + "\n");
+		} catch (RemoteException e) {
+			System.out.println("Ocurrió un error en la conexión con el servidor\n");
+		} catch (ProductNotFoundException e) {
+			System.out.println("No se encontró el item con ID " + id + "\n");
+		} catch (SQLException e) {
+			System.out.println("No se pudo establecer conexión con la base de datos\n");
+		} catch (APIDownException e) {
+			System.out.println("No se pudo establecer conexión con la API\n");
+		}
 	}
 	
 	public void consultarBoleta(int id) {
-		
+		try {
+			Boleta boleta = servidor.obtenerBoleta(id);
+			System.out.println("\nDatos de boleta con ID " + id);
+			Iterator<ItemBoleta> it = boleta.getItems();
+			while(it.hasNext()) {
+				ItemBoleta item = it.next();
+				System.out.println("- " + item.getNombreProducto() + " x" + item.getCantidad() + " Total: $" + item.getPrecioTotal());
+			}
+			System.out.println("Total a pagar: $" + boleta.calcularPrecioFinal());
+			System.out.println("Nombre cajero: " + boleta.getNombreCajero() + "\n");
+		} catch (RemoteException e) {
+			System.out.println("Ocurrió un error en la conexión con el servidor\n");
+			e.printStackTrace();
+		} catch (SQLException e) {
+			System.out.println("No se pudo establecer conexión con la base de datos\n");
+		} catch (BoletaNotFoundException e) {
+			System.out.println("No se encontró la boleta con ID " + id + "\n");
+		} catch (APIDownException e) {
+			System.out.println("No se pudo establecer conexión con la API\n");
+		}
 	}
 
 	public void mostrarMenu() {
