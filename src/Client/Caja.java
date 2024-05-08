@@ -2,14 +2,10 @@ package Client;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
 import Common.APIDownException;
-import Common.Boleta;
-import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemCarrito;
 import Common.ProductNotFoundException;
@@ -65,18 +61,19 @@ public class Caja extends Cliente {
 		try {
 			Item item = servidor.obtenerItem(id);
 			System.out.println("\nNombre:" + item.getNombre());
-			System.out.println("Cantidad disponible: "+ item.getCantidadPack());
+			System.out.println("Cantidad disponible: "+ servidor.obtenerStock(id));
 			System.out.println("Precio base: "+ item.getPrecio());
 			if(item.getDescuento() == 1) {
 				System.out.println("Precio con descuento: "+ item.getPrecioDescuento());
 			}
-		}catch(ProductNotFoundException e){
-			System.out.println("No se encontró el item " + id );
+		} catch (ProductNotFoundException e){
+			System.out.println("No se encontró el item con ID " + id );
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API");
 		} catch (RemoteException e) {
-			System.out.println("No se pudo obtener el item " + id);
-			e.printStackTrace();
+			System.out.println("No se pudo obtener el item con ID " + id);
+		} catch (SQLException e) {
+			System.out.println("No se pudo establecer conexión con la base de datos");
 		}
 	}
 	

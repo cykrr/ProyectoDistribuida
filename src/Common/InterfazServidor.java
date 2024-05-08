@@ -10,4 +10,5 @@ public interface InterfazServidor extends Remote {
     public Item obtenerItem(int idProducto) throws RemoteException, APIDownException, ProductNotFoundException;
     public Boleta obtenerBoleta(int idBoleta) throws RemoteException, SQLException;
     public Usuario logIn(int id, int clave) throws RemoteException, InvalidCredentialsException;
+    public int obtenerStock(int id) throws RemoteException, SQLException, ProductNotFoundException;
 }
