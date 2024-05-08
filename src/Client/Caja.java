@@ -1,121 +1,198 @@
 package Client;
 
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 import Common.APIDownException;
+import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemCarrito;
 import Common.ProductNotFoundException;
 import Common.Usuario;
 
-public class Caja extends Cliente {
-	protected Usuario usuario;
+public class Caja {
+	private Usuario usuario;
+	private Scanner scanner;
+	private InterfazServidor servidor;
+	private ArrayList<ItemCarrito> carrito;
 
-	public Usuario getUsuario() {
-		return usuario;
-	}
-
-	public Caja() throws RemoteException, NotBoundException {
-		super();
-		this.usuario = new Usuario(-1, "nadie", -1);
+	public Caja(Usuario usuario, InterfazServidor servidor, Scanner scanner) {
+		this.usuario = usuario;
+		this.scanner = scanner;
+		this.servidor = servidor;
+		this.carrito = new ArrayList<>();
 	}
 	
-	public boolean logIn(int id, int clave) {
-		try {
-			System.out.println("Iniciando sesión");
-			Usuario usuario = servidor.logIn(id, clave);
-			if (usuario == null) {
-				System.out.println("Credenciales incorrectas");
-				return false;
-			}
-			this.usuario = usuario;
-			return true;
-		} catch (RemoteException e) {
-			System.out.println("No se pudo iniciar sesión");
-			e.printStackTrace();
-			this.usuario = null;
-			return false;
-		}
-	}
-	
-	public ArrayList<ItemCarrito> agregarItem(ArrayList<ItemCarrito> caja, int id, int cantidad) throws RemoteException, APIDownException, ProductNotFoundException{
-		for (ItemCarrito elemento : caja) {
+	public void agregarItem(int id, int cantidad) {
+		for (ItemCarrito elemento : carrito) {
 			if(elemento.getItem().getId() == id) {
-				elemento.setCantidad(elemento.getCantidad()+cantidad);
-				System.out.println("Agregado " + elemento.getItem().getNombre() + "x" + cantidad);
-				return caja;
+				elemento.setCantidad(elemento.getCantidad() + cantidad);
+				System.out.println("Se agregaron " + cantidad + " x " + elemento.getItem().getNombre() + "\n");
 			}
 		}
 		
-		Item item = servidor.obtenerItem(id);
-
-		ItemCarrito itemCarrito = new ItemCarrito(item,cantidad);
-		caja.add(itemCarrito);
-		return caja;
+		try {
+			Item item = servidor.obtenerItem(id);	
+			ItemCarrito itemCarrito = new ItemCarrito(item, cantidad);
+			carrito.add(itemCarrito);
+			System.out.println("Se agregaron " + cantidad + " x " + item.getNombre() + "\n");
+			
+		} catch (RemoteException e) {
+			System.out.println("No se pudo agregar el item con ID " + id + "\n");
+		} catch (APIDownException e) {
+			System.out.println("No se pudo establecer conexión con la API\n");
+		} catch (ProductNotFoundException e) {
+			System.out.println("No se encontró el item con ID " + id + "\n");
+		}
 	}
 	
 	public void consultarItem(int id) {
 		try {
 			Item item = servidor.obtenerItem(id);
-			System.out.println("\nNombre:" + item.getNombre());
-			System.out.println("Cantidad disponible: "+ servidor.obtenerStock(id));
-			System.out.println("Precio base: "+ item.getPrecio());
-			if(item.getDescuento() == 1) {
-				System.out.println("Precio con descuento: "+ item.getPrecioDescuento());
+			System.out.println("Nombre: " + item.getNombre());
+			System.out.println("Stock: " + servidor.obtenerStock(id));
+			System.out.println("Precio base: " + item.getPrecio());
+			System.out.println("Descuento: " + item.getDescuento() + "%");
+			System.out.println("Precio descuento: " + item.getPrecioDescuento());
+			if(item.getCantidadPack() > 1) {
+				System.out.println("Promoción: " + item.getCantidadPack() + " x $" + item.getPrecioPack());
 			}
-		} catch (ProductNotFoundException e){
-			System.out.println("No se encontró el item con ID " + id );
+			System.out.println();
+		} catch (ProductNotFoundException e) {
+			System.out.println("No se encontró el item con ID " + id + "\n");
 		} catch (APIDownException e) {
-			System.out.println("No se pudo establecer conexión con la API");
+			System.out.println("No se pudo establecer conexión con la API\n");
 		} catch (RemoteException e) {
-			System.out.println("No se pudo obtener el item con ID " + id);
+			System.out.println("No se pudo obtener el item con ID " + id + "\n");
 		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos");
+			System.out.println("No se pudo establecer conexión con la base de datos\n");
 		}
 	}
 	
-	public ArrayList<ItemCarrito> eliminarItem(ArrayList<ItemCarrito> caja, int idProducto, int cantidad){
-		for (ItemCarrito elemento : caja) {
+	public void eliminarItem(int idProducto, int cantidad){
+		for (ItemCarrito elemento : carrito) {
 			if(elemento.getItem().getId() == idProducto) {
-				elemento.setCantidad(elemento.getCantidad()-cantidad);
+				elemento.setCantidad(elemento.getCantidad() - cantidad);
 				if(elemento.getCantidad() <= 0) {
-					caja.remove(elemento);
-					System.out.println("Eliminado " + elemento.getItem().getNombre());
-				}else {
-					System.out.println("Eliminado " + elemento.getItem().getNombre() + "x" + cantidad);
+					carrito.remove(elemento);
+					System.out.println("Se eliminó el producto " + elemento.getItem().getNombre());
+				} else {
+					System.out.println("Se eliminó " + cantidad + " x " + elemento.getItem().getNombre());
 				}
-				return caja;
+				return;
 			}
 		}
-		System.out.println("\nEl producto no está en la caja");
-		return caja;
+		System.out.println("El producto no está en la caja\n");
 	}
 	
-	public void consultarCarrito(ArrayList<ItemCarrito> caja) throws RemoteException {
+	public void consultarCarrito() {
 		int total = 0;
-		System.out.println("\n Resumen boleta:");
-		for (ItemCarrito elemento : caja) {
-		    System.out.println("-" + elemento.getItem().getNombre() + " x" + elemento.getCantidad() + " total:" + elemento.getCantidad()*elemento.getItem().getPrecioDescuento() + "$");
-		    total += elemento.getCantidad()*elemento.getItem().getPrecioDescuento();
+		System.out.println("Resumen boleta:");
+		for (ItemCarrito elemento : carrito) {
+		    System.out.println("- " + elemento.getItem().getNombre() + " x" + elemento.getCantidad() + " Total: $" + elemento.getPrecioFinal());
+		    total += elemento.getPrecioFinal();
 		}
-		if(total == 0) {
-			System.out.println("Carrito vacío");
-		}else {
-			System.out.println("Total a pagar: " + total + "$");
+		if (total == 0) {
+			System.out.println("Carrito vacío\n");
+		} else {
+			System.out.println("Total a pagar: $" + total + "\n");
 		}
 	}
 	
-	public void finalizarVenta(ArrayList<ItemCarrito> caja, int idCajero) throws RemoteException, SQLException {
-		if (this.usuario == null) {
-			System.out.println("Inicie sesión para concretar venta");
-			return;
+	public void finalizarVenta() {
+		try {
+			servidor.generarBoleta(carrito, usuario.getId());
+			System.out.println("¡Gracias por comprar!\n");
+		} catch (RemoteException | SQLException e) {
+			System.out.println("Ocurrió un error al generar la boleta\n");
 		}
+	}
 
-		servidor.generarBoleta(caja, idCajero);
-		System.out.println("Gracias por comprar!");
+	public void mostrarMenu() {
+		int opcion;
+		
+		do {
+			System.out.println("¡Bienvenido " + usuario.getNombre() + "! Tu id: " + usuario.getId() + "\n");
+			System.out.println("Por favor, elige una opción:\n");
+			System.out.println("1. Agregar producto al carrito");
+			System.out.println("2. Consultar producto");
+			System.out.println("3. Eliminar producto del carrito");
+			System.out.println("4. Consultar carrito");
+			System.out.println("5. Finalizar venta");
+			System.out.println("9. Cerrar sesión");
+			System.out.println("0. Salir\n");
+			System.out.print("Opción: ");
+			
+			opcion = scanner.nextInt();
+			System.out.println();
+			
+			int id, cantidad;
+			
+			switch (opcion) {
+				case 1:
+					System.out.print("Ingrese id del producto: ");
+					id = scanner.nextInt();
+				
+					System.out.print("Ingrese cantidad: ");
+					cantidad = scanner.nextInt();
+					
+					while(cantidad <= 0) {
+						System.out.println("Ingrese valores mayores a 0");
+						System.out.println("Intente nuevamente: ");
+						cantidad = scanner.nextInt();
+					}
+					
+					agregarItem(id, cantidad);
+					break;
+				
+				case 2:
+					System.out.print("Ingrese id del producto: ");
+					id = scanner.nextInt();
+					
+					consultarItem(id);
+					break;
+				
+				case 3:		
+					System.out.print("Ingrese id del producto: ");
+					id = scanner.nextInt();
+				
+					System.out.print("Ingrese cantidad a eliminar: ");
+					cantidad = scanner.nextInt();
+					
+					while(cantidad <= 0) {
+						System.out.println("Ingrese valores mayores a 0");
+						System.out.println("Intente nuevamente: ");
+						cantidad = scanner.nextInt();
+					}
+					
+					eliminarItem(id, cantidad);
+					break;
+				
+				case 4:
+					consultarCarrito();
+					break;
+					
+				case 5:
+					finalizarVenta();
+					break;
+				
+				case 9:
+					System.out.println("Cerrando sesión...\n");
+					break;
+					
+				case 0:
+					System.out.println("Saliendo...");
+					scanner.close();
+					System.exit(0);
+					
+				default:
+					System.out.println("Opción inválida\n");
+			}
+			
+		} while(opcion != 9);
+		
 	}
 	
 }

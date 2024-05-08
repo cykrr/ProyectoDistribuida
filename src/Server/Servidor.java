@@ -28,7 +28,6 @@ import Common.BDDownException;
 import Common.Boleta;
 import Common.BoletaNotFoundException;
 import Common.InterfazServidor;
-import Common.InvalidCredentialsException;
 import Common.Item;
 import Common.ItemBoleta;
 import Common.ItemCarrito;
@@ -191,7 +190,7 @@ public class Servidor implements InterfazServidor {
 				}
 
 				int cantidad = itemCarrito.getCantidad();		
-				int precioTotal = calcularPrecioTotal(item, cantidad);
+				int precioTotal = itemCarrito.getPrecioFinal();
 				
 				currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
 				statement.executeQuery(currentQuery);
@@ -224,15 +223,6 @@ public class Servidor implements InterfazServidor {
 			throw new ProductNotFoundException(id);
 		}
 		return rs.getInt("stock");
-	}
-
-	private int calcularPrecioTotal(Item item, int cantidad) {
-		if(item.getCantidadPack() == 0) {
-			return cantidad * item.getPrecioDescuento();
-		}
-		int cantidadPromo = cantidad / item.getCantidadPack();
-		int resto = cantidad % item.getCantidadPack();
-		return cantidadPromo * item.getPrecioPack() + resto * item.getPrecioDescuento();
 	}
 	
 	public Item obtenerItem(int idProducto) throws APIDownException, ProductNotFoundException {
@@ -335,29 +325,21 @@ public class Servidor implements InterfazServidor {
 	}
 
 	@Override
-	public Usuario logIn(int id, int clave) throws RemoteException, InvalidCredentialsException {
+	public Usuario logIn(int id, int clave) throws RemoteException {
 		String query = String.format("SELECT idUsuario, nombre, rol FROM usuarios WHERE idUsuario = %d AND clave = %d", id, clave);
-		ResultSet data = null;
+
 		try {
 			Statement statement = conn.createStatement();
-			data = statement.executeQuery(query);
-			if (data == null) {
-				return null;
-			} else {
-				int columnCount = data.getMetaData().getColumnCount();
-				if (columnCount == 0) {
-					throw new InvalidCredentialsException(id);
-				}
-			
-				data.next();
-				if (data.getInt("idUsuario") == id) {
-					int rol = data.getInt("rol");
-					String nombre = data.getString("nombre");
-					return new Usuario(id, nombre, rol);
-				}
-				return null;
+			ResultSet data = statement.executeQuery(query);
 
+			if (data.next() == false) {
+				return null;
 			}
+
+			int rol = data.getInt("rol");
+			String nombre = data.getString("nombre");
+			return new Usuario(id, nombre, rol);
+
 		} catch (SQLException e) {
 			e.getStackTrace();
 			System.err.println("Error al ejecutar sentencia " + query);
