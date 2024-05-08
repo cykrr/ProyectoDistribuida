@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 import Common.APIDownException;
+import Common.Boleta;
 import Common.Item;
 import Common.ItemCarrito;
 import Common.ProductNotFoundException;
@@ -114,7 +115,9 @@ public class Caja extends Cliente {
 			return;
 		}
 
-		servidor.generarBoleta(caja, idCajero);
+		int id = servidor.generarBoleta(caja, idCajero);
+		Boleta boleta = servidor.obtenerBoleta(id);
+		boleta.mostrar();
 		System.out.println("Gracias por comprar!");
 	}
 	

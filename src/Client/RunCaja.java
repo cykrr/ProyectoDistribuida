@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import Common.APIDownException;
+import Common.Boleta;
 import Common.Item;
 import Common.ItemCarrito;
 import Common.ProductNotFoundException;
@@ -57,6 +58,7 @@ public class RunCaja {
 				System.out.println("3. Eliminar producto del carrito");
 				System.out.println("4. Consultar carrito");
 				System.out.println("5. Finalizar venta");
+				System.out.println("6. Obtener boleta");
 				System.out.println("9. Cerrar sesión");
 			}
 			
@@ -177,6 +179,27 @@ public class RunCaja {
 					System.out.print("Ingrese clave: ");
 					clave = scanner.nextInt();
 					caja.logIn(id,clave);
+					break;
+				case 7:
+					System.out.println("Ingrese id de la boleta:");
+					id = scanner.nextInt();
+					try {
+						Boleta boleta = caja.servidor.obtenerBoleta(id);
+						if (boleta != null) {
+							System.out.println("Boleta encontrada");
+							boleta.mostrar();
+						} else {
+							System.out.println("Boleta no encontrada");
+						}
+
+					} catch (RemoteException e) {
+						System.out.println("No se pudo obtener la boleta");
+					} catch (SQLException e) {
+						System.out.println("No se pudo obtener la boleta");
+
+					}
+
+					
 					break;
 					
 				case 9:

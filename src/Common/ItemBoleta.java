@@ -1,6 +1,6 @@
 package Common;
 
-public class ItemBoleta {
+public class ItemBoleta implements java.io.Serializable{
 	private int idProducto;
 	private String nombreProducto;
 	private int precioTotal; // Precio final después de aplicar descuentos/promociones

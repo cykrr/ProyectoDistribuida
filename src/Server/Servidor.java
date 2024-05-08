@@ -143,7 +143,7 @@ public class Servidor implements InterfazServidor {
 		data.next();
 		String nombreCajero = data.getString("nombre");
 		int idCajero = data.getInt("idUsuario");
-		Boleta boleta = new Boleta(idCajero, nombreCajero);
+		Boleta boleta = new Boleta(idCajero, nombreCajero, idBoleta);
 		
 		do {
 			int idProducto = data.getInt("idProducto");
@@ -160,7 +160,7 @@ public class Servidor implements InterfazServidor {
 		return boleta;
 	}
 	
-	public void generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException, SQLException {
+	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException, SQLException {
 		try {
 			// Empezar transacción
 			conn.setAutoCommit(false);
@@ -195,10 +195,23 @@ public class Servidor implements InterfazServidor {
 				
 				currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
 				statement.executeQuery(currentQuery);
+
 				
 				// Actualizar stock
 				currentQuery = String.format(queryStock, cantidad, item.getId());
 				statement.executeUpdate(currentQuery);
+
+				// Obtener id de itemBoleta
+				try {
+					ResultSet rs = statement.executeQuery("SELECT LAST_INSERT_ID()");
+					rs.next();
+					int idItemBoleta = rs.getInt(1);
+					return idItemBoleta;
+				} catch (SQLException e) {
+					System.err.println("Error al obtener id de itemBoleta");
+					throw e;
+				}
+
 			}
 			
 			// Finalizar transacción
@@ -214,6 +227,7 @@ public class Servidor implements InterfazServidor {
 		finally {
 			conn.setAutoCommit(true);
 		}
+		return idCajero;
 	}
 	
 	public int obtenerStock(int id) throws SQLException, ProductNotFoundException {
