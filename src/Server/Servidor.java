@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.rmi.*;
+import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -23,16 +23,18 @@ import java.util.Properties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import Common.APIDownException;
+import Common.BDDownException;
+import Common.Boleta;
+import Common.BoletaNotFoundException;
 import Common.InterfazServidor;
+import Common.InvalidCredentialsException;
 import Common.Item;
 import Common.ItemBoleta;
 import Common.ItemCarrito;
 import Common.ProductNotFoundException;
 import Common.StockMismatchException;
-import Common.APIDownException;
-import Common.BDDownException;
-import Common.Boleta;
-import Common.BoletaNotFoundException;
+import Common.Usuario;
 
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
@@ -126,8 +128,8 @@ public class Servidor implements InterfazServidor {
 	}
 	
 	public Boleta obtenerBoleta(int idBoleta) throws SQLException {
-		String query = "SELECT cajeros.nombre, cajeros.idCajero, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
-				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN cajeros USING(idCajero) WHERE idBoleta = %d";
+		String query = "SELECT usuarios.nombre, usuarios.idUsuario, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
+				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN usuarios USING(idUsuario) WHERE idBoleta = %d";
 		query = String.format(query, idBoleta);
 		
 		Statement statement = conn.createStatement();
@@ -140,7 +142,7 @@ public class Servidor implements InterfazServidor {
 		
 		data.next();
 		String nombreCajero = data.getString("nombre");
-		int idCajero = data.getInt("idCajero");
+		int idCajero = data.getInt("idUsuario");
 		Boleta boleta = new Boleta(idCajero, nombreCajero);
 		
 		do {
@@ -164,7 +166,7 @@ public class Servidor implements InterfazServidor {
 			conn.setAutoCommit(false);
 			
 			// Crear idBoleta y asignar a idCajero
-			String query = "INSERT INTO boletas(idCajero) VALUES (%d)";
+			String query = "INSERT INTO boletas(idUsuario) VALUES (%d)";
 			query = String.format(query, idCajero);
 			
 			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
@@ -183,12 +185,8 @@ public class Servidor implements InterfazServidor {
 			for(int i = 0; i < itemsCarrito.size(); i++) {
 				ItemCarrito itemCarrito = itemsCarrito.get(i);
 				Item item = itemCarrito.getItem();
-				Item dbItem = obtenerItem(item.getId());
 				int stock = obtenerStock(item.getId());
-
-				if (dbItem == null) {
-					throw new ProductNotFoundException(item.getId());
-				} else if (itemCarrito.getCantidad() > stock) {
+				if (itemCarrito.getCantidad() > stock) {
 					throw new StockMismatchException(item.getId(), stock);
 				}
 
@@ -218,7 +216,7 @@ public class Servidor implements InterfazServidor {
 		}
 	}
 	
-	private int obtenerStock(int id) throws SQLException, ProductNotFoundException {
+	public int obtenerStock(int id) throws SQLException, ProductNotFoundException {
 		Statement s = conn.createStatement();
 		String q = "SELECT stock FROM stock WHERE idProducto = " + id;
 		ResultSet rs = s.executeQuery(q);
@@ -334,5 +332,36 @@ public class Servidor implements InterfazServidor {
         br.close();
 
         return contenido.toString();
+	}
+
+	@Override
+	public Usuario logIn(int id, int clave) throws RemoteException, InvalidCredentialsException {
+		String query = String.format("SELECT idUsuario, nombre, rol FROM usuarios WHERE idUsuario = %d AND clave = %d", id, clave);
+		ResultSet data = null;
+		try {
+			Statement statement = conn.createStatement();
+			data = statement.executeQuery(query);
+			if (data == null) {
+				return null;
+			} else {
+				int columnCount = data.getMetaData().getColumnCount();
+				if (columnCount == 0) {
+					throw new InvalidCredentialsException(id);
+				}
+			
+				data.next();
+				if (data.getInt("idUsuario") == id) {
+					int rol = data.getInt("rol");
+					String nombre = data.getString("nombre");
+					return new Usuario(id, nombre, rol);
+				}
+				return null;
+
+			}
+		} catch (SQLException e) {
+			e.getStackTrace();
+			System.err.println("Error al ejecutar sentencia " + query);
+		}
+		return null;
 	}
 }

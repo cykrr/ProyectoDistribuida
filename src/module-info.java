@@ -9,4 +9,5 @@ module ProyectoDistribuida {
     requires java.sql;
     requires com.fasterxml.jackson.databind;
 	exports Common;
+	
 }

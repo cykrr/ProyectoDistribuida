@@ -25,6 +25,10 @@ public class Item implements java.io.Serializable {
 	    return id;
 	}
 	
+	public void setId(int id) {
+		this.id = id;
+	}
+	
 	public int getPrecio() {
 		return precio;
 	}
@@ -47,6 +51,10 @@ public class Item implements java.io.Serializable {
 
 	public String getNombre() {
 	    return nombre;
+	}
+	
+	public void setCantidadPack(int cantidad) {
+		this.cantidadPack = cantidad;
 	}
 
 	@Override
