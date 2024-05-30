@@ -8,19 +8,22 @@ import java.util.Scanner;
 
 import Common.InterfazServidor;
 import Common.Usuario;
+import Common.Logger;
+
 
 public class Cliente {
-	private InterfazServidor servidor;
 	private Scanner scanner;
+	private Conexion conexion;
 	
 	private static final int ROL_CAJERO = 0;
 	private static final int ROL_ADMIN = 1;
 	
-	public Cliente() throws RemoteException, NotBoundException {
-		Registry registry = LocateRegistry.getRegistry("localhost", 1099);
-	    servidor = (InterfazServidor) registry.lookup("Servidor");
+	public Cliente() {
+		conexion = new Conexion();
 		scanner = new Scanner(System.in);
+		startClient();
 	}
+
 	
 	public void startClient() {
 		int opcion;
@@ -59,7 +62,7 @@ public class Cliente {
 		int clave = scanner.nextInt();
 		
 		try {
-			Usuario usuario = servidor.logIn(id, clave);
+			Usuario usuario = conexion.logIn(id, clave);
 			if (usuario == null) {
 				System.out.println("Credenciales incorrectas\n");
 				return;
@@ -67,10 +70,10 @@ public class Cliente {
 			System.out.println();
 			
 			if (usuario.getRol() == ROL_CAJERO) {
-				Caja caja = new Caja(usuario, servidor, scanner);
+				Caja caja = new Caja(usuario, conexion, scanner);
 				caja.mostrarMenu();
 			} else if (usuario.getRol() == ROL_ADMIN) {
-				Administrador administrador = new Administrador(usuario, servidor, scanner);
+				Administrador administrador = new Administrador(usuario, conexion, scanner);
 				administrador.mostrarMenu();
 			}
 		} catch (RemoteException e) {

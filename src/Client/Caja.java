@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import Common.APIDownException;
+import Common.Colors;
 import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemCarrito;
@@ -66,8 +67,8 @@ public class Caja {
 			System.out.println("No se pudo establecer conexión con la API\n");
 		} catch (RemoteException e) {
 			System.out.println("No se pudo obtener el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
+		} catch (RuntimeException e) {
+			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}
 	}
 	
@@ -106,7 +107,7 @@ public class Caja {
 			int idBoleta = servidor.generarBoleta(carrito, usuario.getId());
 			System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
 			System.out.println("¡Gracias por comprar!\n");
-		} catch (RemoteException | SQLException e) {
+		} catch (RemoteException e) {
 			System.out.println("Ocurrió un error al generar la boleta\n");
 		}
 	}

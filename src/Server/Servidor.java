@@ -33,19 +33,22 @@ import Common.ItemCarrito;
 import Common.ProductNotFoundException;
 import Common.StockMismatchException;
 import Common.Usuario;
+import Common.Logger;
 
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
 	private Connection conn;
+	Logger logger;
 
 	public Servidor() throws IOException {
+		logger = new Logger("Servidor");
 		UnicastRemoteObject.exportObject(this, 0);
 		
 		try {
 			conn = createConnection();
 			crearBD(conn);
 		} catch (Exception e) {
-			System.err.println("Error: " + e.getMessage());
+			logger.error(e.getMessage());
 			return;
 		}
 		
@@ -53,7 +56,7 @@ public class Servidor implements InterfazServidor {
 		try {
 			obtenerItem(1);
 		} catch (APIDownException e) {
-			System.err.println("API is down. Server will not be able to function properly.");
+			logger.warning("API is down. Server will not be able to function properly.");
 		}
 	}
 	
@@ -79,130 +82,152 @@ public class Servidor implements InterfazServidor {
 				Statement statement = conn.createStatement();
 				statement.executeQuery(query);
 			} catch (SQLException e) {
-				System.out.println("Error al ejecutar sentencia " + query);
+				logger.error("Error al ejecutar sentencia " + query);
 				throw e;
 			}
         }
 		
 	}
 	
-	public Boleta obtenerBoleta(int idBoleta) throws RemoteException, BoletaNotFoundException, SQLException, APIDownException {
-		String query = "SELECT usuarios.nombre, usuarios.idUsuario, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
-				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN usuarios USING(idUsuario) WHERE idBoleta = %d";
-		query = String.format(query, idBoleta);
-		
-		Statement statement = conn.createStatement();
-		ResultSet data = statement.executeQuery(query);
-		
-		if (!data.next()) {
-			throw new BoletaNotFoundException(idBoleta);
-		}
-		
-		String nombreCajero = data.getString("nombre");
-		int idCajero = data.getInt("idUsuario");
-		Boleta boleta = new Boleta(idCajero, nombreCajero);
-		
-		do {
-			int idProducto = data.getInt("idProducto");
-			int precioTotal = data.getInt("precioTotal");
-			int cantidad = data.getInt("cantidad");
-			
-			Item item = obtenerItem(idProducto);
-			String nombreProducto = item.getNombre();
-			
-			ItemBoleta itemBoleta = new ItemBoleta(idProducto, nombreProducto, precioTotal, cantidad);
-			boleta.agregarItem(itemBoleta);
-		} while(data.next());
-		
-		return boleta;
-	}
-	
-	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException, SQLException {
+	public Boleta obtenerBoleta(int idBoleta) throws RemoteException, BoletaNotFoundException, APIDownException {
 		try {
-			// Empezar transacción
-			conn.setAutoCommit(false);
-			
-			// Crear idBoleta y asignar a idCajero
-			String query = "INSERT INTO boletas(idUsuario) VALUES (%d)";
-			query = String.format(query, idCajero);
-			
-			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-			pstatement.executeUpdate();
 
-			ResultSet data = pstatement.getGeneratedKeys();
-			data.next();
-			int idBoleta = data.getInt(1);
+			String query = "SELECT usuarios.nombre, usuarios.idUsuario, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
+					+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN usuarios USING(idUsuario) WHERE idBoleta = %d";
+			query = String.format(query, idBoleta);
 			
-			// Insertar items a la boleta
 			Statement statement = conn.createStatement();
-			String queryItem = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
-			String queryStock = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
-			String currentQuery;
+			ResultSet data = statement.executeQuery(query);
 			
-			for(int i = 0; i < itemsCarrito.size(); i++) {
-				ItemCarrito itemCarrito = itemsCarrito.get(i);
-				Item item = itemCarrito.getItem();
-				int stock = obtenerStock(item.getId());
-				if (itemCarrito.getCantidad() > stock) {
-					throw new StockMismatchException(item.getId(), stock);
-				}
-
-				int cantidad = itemCarrito.getCantidad();		
-				int precioTotal = itemCarrito.getPrecioFinal();
-				
-				currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
-				statement.executeQuery(currentQuery);
-				
-				// Actualizar stock
-				currentQuery = String.format(queryStock, cantidad, item.getId());
-				statement.executeUpdate(currentQuery);
+			if (!data.next()) {
+				throw new BoletaNotFoundException(idBoleta);
 			}
 			
-			// Finalizar transacción
-			conn.commit();
-			return idBoleta;
-		}
-		catch(Exception e) {
-			conn.rollback(); // Si algo falla, descartar cambios.
-			System.err.println(e);
-			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
-		}
-		finally {
-			conn.setAutoCommit(true);
-		}
-	}
-	
-	public int obtenerStock(int id) throws SQLException, ProductNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "SELECT stock FROM stock WHERE idProducto = %d";
-		query = String.format(query,  id);
-		
-		ResultSet data = statement.executeQuery(query);
-		if (!data.next()) {
-			throw new ProductNotFoundException(id);
-		}
-		return data.getInt("stock");
-	}
-	
-	public void agregarStock(int id, int cantidad) throws RemoteException, SQLException, ProductNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "UPDATE stock SET stock = stock + %d WHERE idProducto = %d";
-		query = String.format(query, cantidad, id);
-		
-		int rowCount = statement.executeUpdate(query);
-		if (rowCount == 0) {
-			throw new ProductNotFoundException(id);
+			String nombreCajero = data.getString("nombre");
+			int idCajero = data.getInt("idUsuario");
+			Boleta boleta = new Boleta(idCajero, nombreCajero);
+			
+			do {
+				int idProducto = data.getInt("idProducto");
+				int precioTotal = data.getInt("precioTotal");
+				int cantidad = data.getInt("cantidad");
+				
+				Item item = obtenerItem(idProducto);
+				String nombreProducto = item.getNombre();
+				
+				ItemBoleta itemBoleta = new ItemBoleta(idProducto, nombreProducto, precioTotal, cantidad);
+				boleta.agregarItem(itemBoleta);
+			} while(data.next());
+			
+			return boleta;
+		} catch (SQLException e) {
+			throw new RuntimeException("Error al obtener boleta");
 		}
 	}
 	
-	public void eliminarStock(int id, int cantidad) throws RemoteException, SQLException, ProductNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
-		query = String.format(query, cantidad, id);
+	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException {
+		try {
+
+			try {
+				// Empezar transacción
+				conn.setAutoCommit(false);
+				
+				// Crear idBoleta y asignar a idCajero
+				String query = "INSERT INTO boletas(idUsuario) VALUES (%d)";
+				query = String.format(query, idCajero);
+				
+				PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+				pstatement.executeUpdate();
+
+				ResultSet data = pstatement.getGeneratedKeys();
+				data.next();
+				int idBoleta = data.getInt(1);
+				
+				// Insertar items a la boleta
+				Statement statement = conn.createStatement();
+				String queryItem = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
+				String queryStock = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
+				String currentQuery;
+				
+				for(int i = 0; i < itemsCarrito.size(); i++) {
+					ItemCarrito itemCarrito = itemsCarrito.get(i);
+					Item item = itemCarrito.getItem();
+					int stock = obtenerStock(item.getId());
+					if (itemCarrito.getCantidad() > stock) {
+						throw new StockMismatchException(item.getId(), stock);
+					}
+
+					int cantidad = itemCarrito.getCantidad();		
+					int precioTotal = itemCarrito.getPrecioFinal();
+					
+					currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
+					statement.executeQuery(currentQuery);
+					
+					// Actualizar stock
+					currentQuery = String.format(queryStock, cantidad, item.getId());
+					statement.executeUpdate(currentQuery);
+				}
+				
+				// Finalizar transacción
+				conn.commit();
+				return idBoleta;
+			}
+			catch(Exception e) {
+				conn.rollback(); // Si algo falla, descartar cambios.
+				System.err.println(e);
+				throw new RuntimeException("Error al generar boleta. Se ha hecho rollback.");
+			}
+			finally {
+				conn.setAutoCommit(true);
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("Error al generar boleta");
+		}
+	}
+	
+	public int obtenerStock(int id) throws ProductNotFoundException {
+		try (PreparedStatement statement = conn.prepareStatement("SELECT stock FROM stock WHERE idProducto = ?")) {
+			statement.setInt(1, id);
+			try (ResultSet data = statement.executeQuery()) {
+				if (!data.next()) {
+					throw new ProductNotFoundException(id);
+				}
+				return data.getInt("stock");
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("Error en la base de datos");
+		}
 		
-		int rowCount = statement.executeUpdate(query);
-		if (rowCount == 0) {
-			throw new ProductNotFoundException(id);
+	}
+	
+	public void agregarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException {
+		try {
+			Statement statement = conn.createStatement();
+			String query = "UPDATE stock SET stock = stock + %d WHERE idProducto = %d";
+			query = String.format(query, cantidad, id);
+			
+			int rowCount = statement.executeUpdate(query);
+			if (rowCount == 0) {
+				throw new ProductNotFoundException(id);
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("Error al agregar stock");
+		}
+	}
+	
+	public void eliminarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException {
+		try {
+			Statement statement = conn.createStatement();
+			String query = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
+			query = String.format(query, cantidad, id);
+			
+			int rowCount = statement.executeUpdate(query);
+			if (rowCount == 0) {
+				throw new ProductNotFoundException(id);
+			}
+
+		} catch (SQLException e) {
+			throw new RuntimeException("Error al eliminar stock");
 		}
 	}
 	
@@ -263,7 +288,7 @@ public class Servidor implements InterfazServidor {
 			return conn;
 		} catch (URISyntaxException | IOException e) {
 			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API (URL malformada)");
+			logger.error("Error al crear la conexion a la API (URL malformada)");
 		}
 		return null;
 	}
@@ -277,7 +302,7 @@ public class Servidor implements InterfazServidor {
 		try {
 			conn = java.sql.DriverManager.getConnection("jdbc:mariadb://localhost:3306/", connectionProps);
 		} catch (SQLException e) {
-			System.err.println("Error al conectar a la base de datos");
+			logger.error("Error al conectar a la base de datos");
 			throw e;
 		}
 		return conn;

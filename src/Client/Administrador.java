@@ -13,6 +13,7 @@ import Common.Item;
 import Common.ItemBoleta;
 import Common.ProductNotFoundException;
 import Common.Usuario;
+import Common.Colors;
 
 public class Administrador {
 	private Usuario usuario;
@@ -33,8 +34,8 @@ public class Administrador {
 			System.out.println("Ocurrió un error en la conexión con el servidor\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
+		} catch (RuntimeException e) {
+			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}
 	}
 	
@@ -46,8 +47,8 @@ public class Administrador {
 			System.out.println("Ocurrió un error en la conexión con el servidor\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
+		} catch (RuntimeException e) {
+			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}
 	}
 	
@@ -62,10 +63,10 @@ public class Administrador {
 			System.out.println("Ocurrió un error en la conexión con el servidor\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API\n");
+		} catch (RuntimeException e) {
+			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}
 	}
 	
@@ -83,12 +84,12 @@ public class Administrador {
 		} catch (RemoteException e) {
 			System.out.println("Ocurrió un error en la conexión con el servidor\n");
 			e.printStackTrace();
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
 		} catch (BoletaNotFoundException e) {
 			System.out.println("No se encontró la boleta con ID " + id + "\n");
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API\n");
+		} catch (RuntimeException e) {
+			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}
 	}
 
