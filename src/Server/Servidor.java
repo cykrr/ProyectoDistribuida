@@ -1,4 +1,5 @@
 package Server;
+import java.util.concurrent.locks.ReentrantLock;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -39,6 +40,7 @@ public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
 	private Connection conn;
 	Logger logger;
+	private final ReentrantLock lock = new ReentrantLock();
 
 	public Servidor() throws IOException {
 		logger = new Logger("Servidor");
@@ -126,6 +128,11 @@ public class Servidor implements InterfazServidor {
 	}
 	
 	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException {
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		try {
 
 			try {
@@ -347,6 +354,18 @@ public class Servidor implements InterfazServidor {
 			System.err.println("Error al ejecutar sentencia " + query);
 		}
 		return null;
+	}
+
+	@Override
+	public void acquireMutex() throws RemoteException {
+		System.out.println("Acquiring mutex");
+		lock.lock();
+	}
+
+	@Override
+	public void releaseMutex() throws RemoteException {
+		System.out.println("Release mutex");
+		lock.unlock();
 	}
 
 }

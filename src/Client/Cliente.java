@@ -1,14 +1,8 @@
 package Client;
 
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.Scanner;
-
-import Common.InterfazServidor;
 import Common.Usuario;
-import Common.Logger;
 
 
 public class Cliente {
@@ -23,6 +17,7 @@ public class Cliente {
 		scanner = new Scanner(System.in);
 		startClient();
 	}
+
 
 	
 	public void startClient() {

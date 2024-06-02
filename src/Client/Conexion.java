@@ -63,13 +63,11 @@ public class Conexion implements InterfazServidor {
 
 	@FunctionalInterface
 	public interface RemoteOperation<T> {
-		T execute() throws RemoteException;
+		T execute() throws RemoteException, APIDownException;
 	}
 
 
-	public <T> T runWithBackup(RemoteOperation<T> operation) {
-		logger.log("Espere un momento..");
-
+	public <T> T runWithBackup(RemoteOperation<T> operation) throws APIDownException {
 		try {
 			return operation.execute();
 		} catch (RemoteException e) {
@@ -82,7 +80,7 @@ public class Conexion implements InterfazServidor {
 				throw new RuntimeException("No se pudo conectar con el servidor de respaldo");
 			}
 		} catch (Exception e) {
-			throw new RuntimeException("Error inesperado: "+ e.getMessage());
+			throw e;
 		}
 	}
 
@@ -128,6 +126,16 @@ public class Conexion implements InterfazServidor {
 	@Override
 	public int obtenerStock(int id) throws RemoteException, ProductNotFoundException {
 		return runWithBackup(() -> servidor.obtenerStock(id));
+	}
+
+	@Override
+	public void acquireMutex() throws RemoteException {
+		runWithBackup(() -> {servidor.acquireMutex(); return null;});
+	}
+
+	@Override
+	public void releaseMutex() throws RemoteException {
+		runWithBackup(() -> {servidor.releaseMutex(); return null;});
 	}
 
 }
