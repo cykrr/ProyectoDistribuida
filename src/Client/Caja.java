@@ -31,6 +31,7 @@ public class Caja {
 			if(elemento.getItem().getId() == id) {
 				elemento.setCantidad(elemento.getCantidad() + cantidad);
 				System.out.println("Se agregó " + cantidad + " x " + elemento.getItem().getNombre() + "\n");
+				return;
 			}
 		}
 		
@@ -105,6 +106,7 @@ public class Caja {
 	public void finalizarVenta() {
 		try {
 			int idBoleta = servidor.generarBoleta(carrito, usuario.getId());
+			carrito = new ArrayList<>();
 			System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
 			System.out.println("¡Gracias por comprar!\n");
 		} catch (RemoteException e) {
