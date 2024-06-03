@@ -103,6 +103,12 @@ public class Caja {
 	}
 	
 	public void finalizarVenta() {
+		if (carrito.size() == 0) {
+			System.out.println("El carrito no puede quedar vacío!");
+			System.out.println("Por favor, agrega algunos productos.\n");
+			return;
+		}
+		
 		try {
 			int idBoleta = servidor.generarBoleta(carrito, usuario.getNombre());
 			carrito = new ArrayList<>();
