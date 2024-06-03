@@ -104,8 +104,9 @@ public class Caja {
 	
 	public void finalizarVenta() {
 		try {
-			int idBoleta = servidor.generarBoleta(carrito, usuario.getId());
+			int idBoleta = servidor.generarBoleta(carrito, usuario.getNombre());
 			carrito = new ArrayList<>();
+			
 			System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
 			System.out.println("¡Gracias por comprar!\n");
 		} catch (RemoteException | SQLException e) {

@@ -26,11 +26,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import Common.APIDownException;
 import Common.Boleta;
 import Common.BoletaNotFoundException;
+import Common.CajeroNotFoundException;
 import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemBoleta;
 import Common.ItemCarrito;
 import Common.ProductNotFoundException;
+import Common.Rol;
 import Common.StockMismatchException;
 import Common.Usuario;
 
@@ -87,8 +89,8 @@ public class Servidor implements InterfazServidor {
 	}
 	
 	public Boleta obtenerBoleta(int idBoleta) throws RemoteException, BoletaNotFoundException, SQLException, APIDownException {
-		String query = "SELECT usuarios.nombre, usuarios.idUsuario, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
-				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN usuarios USING(idUsuario) WHERE idBoleta = %d";
+		String query = "SELECT nombreCajero, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
+				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) WHERE idBoleta = %d";
 		query = String.format(query, idBoleta);
 		
 		Statement statement = conn.createStatement();
@@ -98,9 +100,8 @@ public class Servidor implements InterfazServidor {
 			throw new BoletaNotFoundException(idBoleta);
 		}
 		
-		String nombreCajero = data.getString("nombre");
-		int idCajero = data.getInt("idUsuario");
-		Boleta boleta = new Boleta(idCajero, nombreCajero);
+		String nombreCajero = data.getString("nombreCajero");
+		Boleta boleta = new Boleta(nombreCajero);
 		
 		do {
 			int idProducto = data.getInt("idProducto");
@@ -117,14 +118,14 @@ public class Servidor implements InterfazServidor {
 		return boleta;
 	}
 	
-	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException, SQLException {
+	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, String nombreCajero) throws RemoteException, SQLException {
 		try {
 			// Empezar transacción
 			conn.setAutoCommit(false);
 			
 			// Crear idBoleta y asignar a idCajero
-			String query = "INSERT INTO boletas(idUsuario) VALUES (%d)";
-			query = String.format(query, idCajero);
+			String query = "INSERT INTO boletas(nombreCajero) VALUES ('%s')";
+			query = String.format(query, nombreCajero);
 			
 			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 			pstatement.executeUpdate();
@@ -315,7 +316,7 @@ public class Servidor implements InterfazServidor {
 
 			int rol = data.getInt("rol");
 			String nombre = data.getString("nombre");
-			return new Usuario(id, nombre, rol);
+			return new Usuario(id, nombre, clave, rol);
 
 		} catch (SQLException e) {
 			e.getStackTrace();
@@ -324,4 +325,45 @@ public class Servidor implements InterfazServidor {
 		return null;
 	}
 
+	@Override
+	public ArrayList<Usuario> obtenerCajeros() throws RemoteException, SQLException {
+		Statement statement = conn.createStatement();
+		String query = "SELECT idUsuario, nombre, clave FROM usuarios WHERE rol = %d";
+		query = String.format(query, Rol.CAJERO);
+		
+		ArrayList<Usuario> cajeros = new ArrayList<>();
+		ResultSet data = statement.executeQuery(query);
+		while(data.next()) {
+			String nombre = data.getString("nombre");
+			int clave = data.getInt("clave");
+			int id = data.getInt("idUsuario");
+			
+			Usuario usuario = new Usuario(id, nombre, clave, Rol.CAJERO);
+			cajeros.add(usuario);
+			
+		}
+		return cajeros;
+	}
+
+	@Override
+	public void agregarCajero(String nombre, int clave) throws RemoteException, SQLException {
+		Statement statement = conn.createStatement();
+		String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
+		query = String.format(query, nombre, clave, Rol.CAJERO);
+		
+		statement.executeUpdate(query);
+	}
+
+	@Override
+	public void eliminarCajero(int id) throws RemoteException, SQLException, CajeroNotFoundException {
+		Statement statement = conn.createStatement();
+		String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
+		query = String.format(query, id, Rol.CAJERO);
+		
+		int rowsAffected = statement.executeUpdate(query);
+		if(rowsAffected == 0) {
+			throw new CajeroNotFoundException(id);
+		}
+	}
+	
 }

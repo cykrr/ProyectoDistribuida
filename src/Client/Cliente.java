@@ -7,14 +7,12 @@ import java.rmi.registry.Registry;
 import java.util.Scanner;
 
 import Common.InterfazServidor;
+import Common.Rol;
 import Common.Usuario;
 
 public class Cliente {
 	private InterfazServidor servidor;
 	private Scanner scanner;
-	
-	private static final int ROL_CAJERO = 0;
-	private static final int ROL_ADMIN = 1;
 	
 	public Cliente() throws RemoteException, NotBoundException {
 		Registry registry = LocateRegistry.getRegistry("localhost", 1099);
@@ -66,10 +64,10 @@ public class Cliente {
 			}
 			System.out.println();
 			
-			if (usuario.getRol() == ROL_CAJERO) {
+			if (usuario.getRol() == Rol.CAJERO) {
 				Caja caja = new Caja(usuario, servidor, scanner);
 				caja.mostrarMenu();
-			} else if (usuario.getRol() == ROL_ADMIN) {
+			} else if (usuario.getRol() == Rol.ADMIN) {
 				Administrador administrador = new Administrador(usuario, servidor, scanner);
 				administrador.mostrarMenu();
 			}

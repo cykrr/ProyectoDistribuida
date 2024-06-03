@@ -7,11 +7,13 @@ public class Usuario implements Serializable {
 
     private int id;
     private String nombre;
+    private int clave;
     private int rol;
 
-    public Usuario(int id, String nombre, int rol) {
+    public Usuario(int id, String nombre, int clave, int rol) {
         this.id = id;
         this.nombre = nombre;
+        this.clave = clave;
         this.rol = rol;
     }
 
@@ -21,6 +23,10 @@ public class Usuario implements Serializable {
 
     public String getNombre() {
         return nombre;
+    }
+    
+    public int getClave() {
+    	return clave;
     }
 
     public int getRol() {
