@@ -135,20 +135,23 @@ public class Caja {
 	}
 	
 	public void finalizarVenta() {
+		if (carrito.size() == 0) {
+			System.out.println("El carrito no puede quedar vacío!");
+			System.out.println("Por favor, agrega algunos productos.\n");
+			return;
+		}
+		
 		try {
 			threadRun(() -> {
 				servidor.acquireMutex();
-				int idBoleta = servidor.generarBoleta(carrito, usuario.getId());
+				int idBoleta = servidor.generarBoleta(carrito, usuario.getNombre());
 				carrito = new ArrayList<>();
 				System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
 				System.out.println("¡Gracias por comprar!\n");
 				return null;
 			});
-		} catch (RemoteException e) {
-			System.out.println("Ocurrió un error al generar la boleta\n");
 		} catch (Exception e) {
-			System.out.println("Ocurrió un error al generar la boleta\n");
-
+			System.out.println(e.getMessage());
 		} finally {
 			try {
 				servidor.releaseMutex();

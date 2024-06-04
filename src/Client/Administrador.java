@@ -2,6 +2,7 @@ package Client;
 
 import java.rmi.RemoteException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Scanner;
 
@@ -142,6 +143,44 @@ public class Administrador {
 			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}
 	}
+	
+	public void mostrarCajeros() {
+		try {
+			ArrayList<Usuario> cajeros = servidor.obtenerCajeros();
+			if (cajeros.size() == 0) {
+				System.out.println("No hay cajeros registrados\n");
+				return;
+			}
+			
+			System.out.println(String.format("Mostrando datos para %d cajeros registrados\n", cajeros.size()));
+			System.out.println(String.format("%-10s %-20s %s", "ID", "Nombre", "Clave"));
+			for(int i = 0; i < cajeros.size(); i++) {
+				Usuario cajero = cajeros.get(i);
+				System.out.println(String.format("%-10d %-20s %d", cajero.getId(), cajero.getNombre(), cajero.getClave()));
+			}
+			System.out.println();
+		} catch (Exception e) {
+			System.out.println(e.getMessage() + "\n");
+		}
+	}
+	
+	public void agregarCajero(String nombre, int clave) {
+		try {
+			servidor.agregarCajero(nombre, clave);
+			System.out.println(String.format("Cajero agregado con éxito\n"));
+		} catch(Exception e) {
+			System.out.println(e.getMessage() + "\n");
+		}
+	}
+	
+	public void eliminarCajero(int id) {
+		try {
+			servidor.eliminarCajero(id);
+			System.out.println(String.format("Cajero con ID %d eliminado con éxito\n", id));
+		} catch (Exception e) {
+			System.out.println(e.getMessage() + "\n");
+		}
+	}
 
 	public void mostrarMenu() {
 		int opcion;
@@ -153,6 +192,9 @@ public class Administrador {
 			System.out.println("2. Eliminar stock a producto");
 			System.out.println("3. Consultar stock");
 			System.out.println("4. Consultar boleta");
+			System.out.println("5. Mostrar cajeros");
+			System.out.println("6. Agregar cajero");
+			System.out.println("7. Eliminar cajero");
 			System.out.println("9. Cerrar sesión");
 			System.out.println("0. Salir\n");
 			System.out.print("Opción: ");
@@ -160,7 +202,8 @@ public class Administrador {
 			opcion = scanner.nextInt();
 			System.out.println();
 			
-			int id, cantidad;
+			int id, cantidad, clave;
+			String nombre;
 			
 			switch (opcion) {
 				case 1:
@@ -207,6 +250,28 @@ public class Administrador {
 					id = scanner.nextInt();
 					
 					consultarBoleta(id);
+					break;
+					
+				case 5:
+					mostrarCajeros();
+					break;
+					
+				case 6:
+					System.out.print("Ingrese nombre del cajero: ");
+					scanner.nextLine();
+					nombre = scanner.nextLine();
+					
+					System.out.print("Ingrese clave numérica del cajero: ");
+					clave = scanner.nextInt();
+					
+					agregarCajero(nombre, clave);
+					break;
+				
+				case 7:
+					System.out.print("Ingrese id del cajero: ");
+					id = scanner.nextInt();
+					
+					eliminarCajero(id);
 					break;
 					
 				case 9:

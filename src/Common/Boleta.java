@@ -9,11 +9,9 @@ public class Boleta implements Serializable {
 	
 	private ArrayList<ItemBoleta> items;
 	private String nombreCajero;
-	private int idCajero;
 	
-	public Boleta(int idCajero, String nombreCajero) {
+	public Boleta(String nombreCajero) {
 		items = new ArrayList<>();
-		this.idCajero = idCajero;
 		this.nombreCajero = nombreCajero;
 	}
 	
@@ -35,10 +33,6 @@ public class Boleta implements Serializable {
 	
 	public String getNombreCajero() {
 		return nombreCajero; 
-	}
-	
-	public int getIdCajero() {
-		return idCajero;
 	}
 	
 }

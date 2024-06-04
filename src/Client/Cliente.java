@@ -2,6 +2,9 @@ package Client;
 
 import java.rmi.RemoteException;
 import java.util.Scanner;
+
+import Common.InterfazServidor;
+import Common.Rol;
 import Common.Usuario;
 
 
@@ -9,8 +12,6 @@ public class Cliente {
 	private Scanner scanner;
 	private Conexion conexion;
 	
-	private static final int ROL_CAJERO = 0;
-	private static final int ROL_ADMIN = 1;
 	
 	public Cliente() {
 		conexion = new Conexion();
@@ -64,10 +65,10 @@ public class Cliente {
 			}
 			System.out.println();
 			
-			if (usuario.getRol() == ROL_CAJERO) {
+			if (usuario.getRol() == Rol.CAJERO) {
 				Caja caja = new Caja(usuario, conexion, scanner);
 				caja.mostrarMenu();
-			} else if (usuario.getRol() == ROL_ADMIN) {
+			} else if (usuario.getRol() == Rol.ADMIN) {
 				Administrador administrador = new Administrador(usuario, conexion, scanner);
 				administrador.mostrarMenu();
 			}

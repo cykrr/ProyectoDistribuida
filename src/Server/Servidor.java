@@ -1,5 +1,5 @@
 package Server;
-import java.util.concurrent.locks.ReentrantLock;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.locks.ReentrantLock;
 
 // import JSON Jackson core
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,14 +28,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import Common.APIDownException;
 import Common.Boleta;
 import Common.BoletaNotFoundException;
+import Common.CajeroNotFoundException;
 import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemBoleta;
 import Common.ItemCarrito;
+import Common.Logger;
 import Common.ProductNotFoundException;
+import Common.Rol;
 import Common.StockMismatchException;
 import Common.Usuario;
-import Common.Logger;
 
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
@@ -45,7 +48,7 @@ public class Servidor implements InterfazServidor {
 	public Servidor() throws IOException {
 		logger = new Logger("Servidor");
 		UnicastRemoteObject.exportObject(this, 0);
-		
+
 		try {
 			conn = createConnection();
 			crearBD(conn);
@@ -53,7 +56,7 @@ public class Servidor implements InterfazServidor {
 			logger.error(e.getMessage());
 			return;
 		}
-		
+
 		// test connection to API
 		try {
 			obtenerItem(1);
@@ -61,10 +64,10 @@ public class Servidor implements InterfazServidor {
 			logger.warning("API is down. Server will not be able to function properly.");
 		}
 	}
-	
+
 	private void crearBD(Connection conn) throws Exception {
 		String queries;
-		
+
 		String path = "src/Server/db.sql";
 		try {
 			queries = readFile(path);
@@ -72,123 +75,107 @@ public class Servidor implements InterfazServidor {
 			System.out.println("Error al leer archivo " + path + ".\nNo se pudo crear la base de datos.");
 			throw e;
 		}
-		
+
 		String[] queriesArray = queries.split(";");
-		
-        for (int i = 0; i < queriesArray.length; i++) {
-            queriesArray[i] = queriesArray[i].trim();
-        }
-		
-        for (String query : queriesArray) {
-        	try {
+
+		for (int i = 0; i < queriesArray.length; i++) {
+			queriesArray[i] = queriesArray[i].trim();
+		}
+
+		for (String query : queriesArray) {
+			try {
 				Statement statement = conn.createStatement();
 				statement.executeQuery(query);
 			} catch (SQLException e) {
 				logger.error("Error al ejecutar sentencia " + query);
 				throw e;
 			}
-        }
-		
-	}
-	
-	public Boleta obtenerBoleta(int idBoleta) throws RemoteException, BoletaNotFoundException, APIDownException {
-		try {
+		}
 
-			String query = "SELECT usuarios.nombre, usuarios.idUsuario, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
-					+ "FROM itemsBoleta JOIN boletas USING(idBoleta) JOIN usuarios USING(idUsuario) WHERE idBoleta = %d";
-			query = String.format(query, idBoleta);
-			
+	}
+
+	public Boleta obtenerBoleta(int idBoleta)
+			throws RemoteException, BoletaNotFoundException, SQLException, APIDownException {
+		String query = "SELECT nombreCajero, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
+				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) WHERE idBoleta = %d";
+		query = String.format(query, idBoleta);
+
+		Statement statement = conn.createStatement();
+		ResultSet data = statement.executeQuery(query);
+
+		if (!data.next()) {
+			throw new BoletaNotFoundException(idBoleta);
+		}
+
+		String nombreCajero = data.getString("nombreCajero");
+		Boleta boleta = new Boleta(nombreCajero);
+
+		do {
+			int idProducto = data.getInt("idProducto");
+			int precioTotal = data.getInt("precioTotal");
+			int cantidad = data.getInt("cantidad");
+
+			Item item = obtenerItem(idProducto);
+			String nombreProducto = item.getNombre();
+
+			ItemBoleta itemBoleta = new ItemBoleta(idProducto, nombreProducto, precioTotal, cantidad);
+			boleta.agregarItem(itemBoleta);
+		} while (data.next());
+
+		return boleta;
+	}
+
+	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, String nombreCajero)
+			throws RemoteException, SQLException {
+		try {
+			// Empezar transacción
+			conn.setAutoCommit(false);
+
+			// Crear idBoleta y asignar a idCajero
+			String query = "INSERT INTO boletas(nombreCajero) VALUES ('%s')";
+			query = String.format(query, nombreCajero);
+
+			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+			pstatement.executeUpdate();
+
+			ResultSet data = pstatement.getGeneratedKeys();
+			data.next();
+			int idBoleta = data.getInt(1);
+
+			// Insertar items a la boleta
 			Statement statement = conn.createStatement();
-			ResultSet data = statement.executeQuery(query);
-			
-			if (!data.next()) {
-				throw new BoletaNotFoundException(idBoleta);
-			}
-			
-			String nombreCajero = data.getString("nombre");
-			int idCajero = data.getInt("idUsuario");
-			Boleta boleta = new Boleta(idCajero, nombreCajero);
-			
-			do {
-				int idProducto = data.getInt("idProducto");
-				int precioTotal = data.getInt("precioTotal");
-				int cantidad = data.getInt("cantidad");
-				
-				Item item = obtenerItem(idProducto);
-				String nombreProducto = item.getNombre();
-				
-				ItemBoleta itemBoleta = new ItemBoleta(idProducto, nombreProducto, precioTotal, cantidad);
-				boleta.agregarItem(itemBoleta);
-			} while(data.next());
-			
-			return boleta;
-		} catch (SQLException e) {
-			throw new RuntimeException("Error al obtener boleta");
-		}
-	}
-	
-	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, int idCajero) throws RemoteException {
-		try {
-			Thread.sleep(10000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		try {
+			String queryItem = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
+			String queryStock = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
+			String currentQuery;
 
-			try {
-				// Empezar transacción
-				conn.setAutoCommit(false);
-				
-				// Crear idBoleta y asignar a idCajero
-				String query = "INSERT INTO boletas(idUsuario) VALUES (%d)";
-				query = String.format(query, idCajero);
-				
-				PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-				pstatement.executeUpdate();
-
-				ResultSet data = pstatement.getGeneratedKeys();
-				data.next();
-				int idBoleta = data.getInt(1);
-				
-				// Insertar items a la boleta
-				Statement statement = conn.createStatement();
-				String queryItem = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
-				String queryStock = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
-				String currentQuery;
-				
-				for(int i = 0; i < itemsCarrito.size(); i++) {
-					ItemCarrito itemCarrito = itemsCarrito.get(i);
-					Item item = itemCarrito.getItem();
-					int stock = obtenerStock(item.getId());
-					if (itemCarrito.getCantidad() > stock) {
-						throw new StockMismatchException(item.getId(), stock);
-					}
-
-					int cantidad = itemCarrito.getCantidad();		
-					int precioTotal = itemCarrito.getPrecioFinal();
-					
-					currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
-					statement.executeQuery(currentQuery);
-					
-					// Actualizar stock
-					currentQuery = String.format(queryStock, cantidad, item.getId());
-					statement.executeUpdate(currentQuery);
+			for (int i = 0; i < itemsCarrito.size(); i++) {
+				ItemCarrito itemCarrito = itemsCarrito.get(i);
+				Item item = itemCarrito.getItem();
+				int stock = obtenerStock(item.getId());
+				if (itemCarrito.getCantidad() > stock) {
+					throw new StockMismatchException(item.getId(), stock);
 				}
-				
-				// Finalizar transacción
-				conn.commit();
-				return idBoleta;
+
+				int cantidad = itemCarrito.getCantidad();
+				int precioTotal = itemCarrito.getPrecioFinal();
+
+				currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
+				statement.executeQuery(currentQuery);
+
+				// Actualizar stock
+				currentQuery = String.format(queryStock, cantidad, item.getId());
+				statement.executeUpdate(currentQuery);
 			}
-			catch(Exception e) {
-				conn.rollback(); // Si algo falla, descartar cambios.
-				System.err.println(e);
-				throw new RuntimeException("Error al generar boleta. Se ha hecho rollback.");
-			}
-			finally {
-				conn.setAutoCommit(true);
-			}
-		} catch (SQLException e) {
-			throw new RuntimeException("Error al generar boleta");
+
+			// Finalizar transacción
+			conn.commit();
+			return idBoleta;
+		} catch (Exception e) {
+			conn.rollback(); // Si algo falla, descartar cambios.
+			System.err.println(e);
+			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
+		} finally {
+			conn.setAutoCommit(true);
 		}
 	}
 	
@@ -347,7 +334,7 @@ public class Servidor implements InterfazServidor {
 
 			int rol = data.getInt("rol");
 			String nombre = data.getString("nombre");
-			return new Usuario(id, nombre, rol);
+			return new Usuario(id, nombre, clave, rol);
 
 		} catch (SQLException e) {
 			e.getStackTrace();
@@ -368,4 +355,44 @@ public class Servidor implements InterfazServidor {
 		lock.unlock();
 	}
 
+	public ArrayList<Usuario> obtenerCajeros() throws RemoteException, SQLException {
+		Statement statement = conn.createStatement();
+		String query = "SELECT idUsuario, nombre, clave FROM usuarios WHERE rol = %d";
+		query = String.format(query, Rol.CAJERO);
+		
+		ArrayList<Usuario> cajeros = new ArrayList<>();
+		ResultSet data = statement.executeQuery(query);
+		while(data.next()) {
+			String nombre = data.getString("nombre");
+			int clave = data.getInt("clave");
+			int id = data.getInt("idUsuario");
+			
+			Usuario usuario = new Usuario(id, nombre, clave, Rol.CAJERO);
+			cajeros.add(usuario);
+			
+		}
+		return cajeros;
+	}
+
+	@Override
+	public void agregarCajero(String nombre, int clave) throws RemoteException, SQLException {
+		Statement statement = conn.createStatement();
+		String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
+		query = String.format(query, nombre, clave, Rol.CAJERO);
+		
+		statement.executeUpdate(query);
+	}
+
+	@Override
+	public void eliminarCajero(int id) throws RemoteException, SQLException, CajeroNotFoundException {
+		Statement statement = conn.createStatement();
+		String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
+		query = String.format(query, id, Rol.CAJERO);
+		
+		int rowsAffected = statement.executeUpdate(query);
+		if(rowsAffected == 0) {
+			throw new CajeroNotFoundException(id);
+		}
+	}
+	
 }
