@@ -7,10 +7,10 @@ import java.util.ArrayList;
 
 
 public interface InterfazServidor extends Remote {
+    public Usuario logIn(int id, int clave) throws RemoteException, InvalidCredentialsException, SQLException;
     public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, String nombreCajero) throws RemoteException, SQLException;
-    public Item obtenerItem(int idProducto) throws RemoteException, APIDownException, ProductNotFoundException;
+    public Item obtenerItem(int idProducto) throws RemoteException, APIDownException, ProductNotFoundException, SQLException;
     public Boleta obtenerBoleta(int idBoleta) throws RemoteException, BoletaNotFoundException, APIDownException, SQLException;
-    public Usuario logIn(int id, int clave) throws RemoteException, InvalidCredentialsException;
     public void agregarStock(int id, int cantidad) throws RemoteException, SQLException, ProductNotFoundException;
     public void eliminarStock(int id, int cantidad) throws RemoteException, SQLException, ProductNotFoundException;
     public int obtenerStock(int id) throws RemoteException, SQLException, ProductNotFoundException;

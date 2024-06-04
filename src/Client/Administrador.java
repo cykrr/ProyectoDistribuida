@@ -116,6 +116,8 @@ public class Administrador {
 			System.out.println("No se encontró el item con ID " + id + "\n");
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API\n");
+		} catch (SQLException e) {
+			System.out.println("Ocurrió un error con el servidor\n");
 		} catch (RuntimeException e) {
 			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}
@@ -139,6 +141,8 @@ public class Administrador {
 			System.out.println("No se encontró la boleta con ID " + id + "\n");
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API\n");
+		} catch (SQLException e) {
+			System.out.println("Ocurrió un error con el servidor\n");
 		} catch (RuntimeException e) {
 			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
 		}

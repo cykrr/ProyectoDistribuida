@@ -1,6 +1,7 @@
 package Client;
 
 import java.rmi.RemoteException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.Callable;
@@ -74,11 +75,13 @@ public class Caja {
 			
 		} catch (RemoteException e) {
 			System.out.println("No se pudo agregar el item con ID " + id + "\n");
+		} catch (SQLException e) {
+			System.out.println("Ocurrió un error con la base de datos\n");
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
-		}
+		} 
 	}
 	
 	public void consultarItem(int id) {
@@ -93,6 +96,8 @@ public class Caja {
 				System.out.println("Promoción: " + item.getCantidadPack() + " x $" + item.getPrecioPack());
 			}
 			System.out.println();
+		} catch (SQLException e) {
+			System.out.println("Ocurrió un error con la base de datos\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
 		} catch (APIDownException e) {
