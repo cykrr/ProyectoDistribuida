@@ -17,6 +17,6 @@ public interface InterfazServidor extends Remote {
     public ArrayList<Usuario> obtenerCajeros() throws RemoteException, SQLException;
     public void agregarCajero(String nombre, int clave) throws RemoteException, SQLException;
     public void eliminarCajero(int id) throws RemoteException, SQLException, CajeroNotFoundException;
-    public void acquireMutex() throws RemoteException;
+    public boolean requestMutex() throws RemoteException;
     public void releaseMutex() throws RemoteException;
 }

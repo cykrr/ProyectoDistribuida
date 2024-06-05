@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.locks.ReentrantLock;
 
 // import JSON Jackson core
 import com.fasterxml.jackson.databind.JsonNode;
@@ -42,8 +41,9 @@ import Common.Usuario;
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
 	private Connection conn;
-	Logger logger;
-	private final ReentrantLock lock = new ReentrantLock();
+	private Logger logger;
+	private boolean inUse;
+	private int retryTime = 1000;
 
 	public Servidor() throws IOException {
 		logger = new Logger("Servidor");
@@ -93,9 +93,9 @@ public class Servidor implements InterfazServidor {
 		}
 
 	}
-
-	public Boleta obtenerBoleta(int idBoleta)
-			throws RemoteException, BoletaNotFoundException, SQLException, APIDownException {
+	
+	public Boleta obtenerBoleta(int idBoleta) throws RemoteException, BoletaNotFoundException, SQLException, APIDownException {
+		System.out.println("Obteniendo boleta...");
 		String query = "SELECT nombreCajero, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
 				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) WHERE idBoleta = %d";
 		query = String.format(query, idBoleta);
@@ -122,11 +122,16 @@ public class Servidor implements InterfazServidor {
 			boleta.agregarItem(itemBoleta);
 		} while (data.next());
 
+		System.out.println("Boleta obtenida con éxito");
 		return boleta;
 	}
 
-	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, String nombreCajero)
-			throws RemoteException, SQLException {
+	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, String nombreCajero) throws RemoteException, SQLException {
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Generando boleta...");
+		
 		try {
 			// Empezar transacción
 			conn.setAutoCommit(false);
@@ -176,25 +181,29 @@ public class Servidor implements InterfazServidor {
 			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
 		} finally {
 			conn.setAutoCommit(true);
+			releaseMutex();
 		}
 	}
 	
-	public int obtenerStock(int id) throws ProductNotFoundException {
-		try (PreparedStatement statement = conn.prepareStatement("SELECT stock FROM stock WHERE idProducto = ?")) {
-			statement.setInt(1, id);
-			try (ResultSet data = statement.executeQuery()) {
-				if (!data.next()) {
-					throw new ProductNotFoundException(id);
-				}
-				return data.getInt("stock");
-			}
-		} catch (SQLException e) {
-			throw new RuntimeException("Error en la base de datos");
-		}
+	public int obtenerStock(int id) throws ProductNotFoundException, SQLException {
+		System.out.println("Obteniendo stock...");
 		
+		PreparedStatement statement = conn.prepareStatement("SELECT stock FROM stock WHERE idProducto = ?");
+		statement.setInt(1, id);
+		ResultSet data = statement.executeQuery();
+		
+		if (!data.next()) {
+			throw new ProductNotFoundException(id);
+		}
+		return data.getInt("stock");
 	}
 	
-	public void agregarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException {
+	public void agregarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException, SQLException {
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Agregando stock...");
+		
 		try {
 			Statement statement = conn.createStatement();
 			String query = "UPDATE stock SET stock = stock + %d WHERE idProducto = %d";
@@ -204,12 +213,17 @@ public class Servidor implements InterfazServidor {
 			if (rowCount == 0) {
 				throw new ProductNotFoundException(id);
 			}
-		} catch (SQLException e) {
-			throw new RuntimeException("Error al agregar stock");
+		} finally {
+			releaseMutex();
 		}
 	}
 	
-	public void eliminarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException {
+	public void eliminarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException, SQLException {
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Eliminando stock...");
+		
 		try {
 			Statement statement = conn.createStatement();
 			String query = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
@@ -220,12 +234,13 @@ public class Servidor implements InterfazServidor {
 				throw new ProductNotFoundException(id);
 			}
 
-		} catch (SQLException e) {
-			throw new RuntimeException("Error al eliminar stock");
+		} finally {
+			releaseMutex();
 		}
 	}
 	
 	public Item obtenerItem(int idProducto) throws APIDownException, ProductNotFoundException {
+		System.out.println("Obteniendo producto...");
 		Map<String, String> params = new HashMap<>();
 		params.put("id", Integer.toString(idProducto));
 		HttpURLConnection conn = establishConnection("products" +  ParameterStringBuilder.getParamsString(params));
@@ -267,7 +282,6 @@ public class Servidor implements InterfazServidor {
 		} finally {
 			conn.disconnect();
 		}
-
 
 	}
 
@@ -322,6 +336,7 @@ public class Servidor implements InterfazServidor {
 
 	@Override
 	public Usuario logIn(int id, int clave) throws RemoteException {
+		System.out.println("Intento de inicio de sesión con ID " + id);
 		String query = String.format("SELECT idUsuario, nombre, rol FROM usuarios WHERE idUsuario = %d AND clave = %d", id, clave);
 
 		try {
@@ -334,6 +349,7 @@ public class Servidor implements InterfazServidor {
 
 			int rol = data.getInt("rol");
 			String nombre = data.getString("nombre");
+			System.out.println("Sesión iniciada para el usuario " + id);
 			return new Usuario(id, nombre, clave, rol);
 
 		} catch (SQLException e) {
@@ -344,18 +360,8 @@ public class Servidor implements InterfazServidor {
 	}
 
 	@Override
-	public void acquireMutex() throws RemoteException {
-		System.out.println("Acquiring mutex");
-		lock.lock();
-	}
-
-	@Override
-	public void releaseMutex() throws RemoteException {
-		System.out.println("Release mutex");
-		lock.unlock();
-	}
-
 	public ArrayList<Usuario> obtenerCajeros() throws RemoteException, SQLException {
+		System.out.println("Obteniendo cajeros...");
 		Statement statement = conn.createStatement();
 		String query = "SELECT idUsuario, nombre, clave FROM usuarios WHERE rol = %d";
 		query = String.format(query, Rol.CAJERO);
@@ -369,22 +375,50 @@ public class Servidor implements InterfazServidor {
 			
 			Usuario usuario = new Usuario(id, nombre, clave, Rol.CAJERO);
 			cajeros.add(usuario);
-			
 		}
 		return cajeros;
 	}
 
 	@Override
 	public void agregarCajero(String nombre, int clave) throws RemoteException, SQLException {
-		Statement statement = conn.createStatement();
-		String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
-		query = String.format(query, nombre, clave, Rol.CAJERO);
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Agregando cajero...");
 		
-		statement.executeUpdate(query);
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		try {
+			Statement statement = conn.createStatement();
+			String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
+			query = String.format(query, nombre, clave, Rol.CAJERO);
+			
+			statement.executeUpdate(query);
+			System.out.println("Cajero agregado con éxito");
+		} finally {
+			releaseMutex();
+		}
 	}
 
 	@Override
 	public void eliminarCajero(int id) throws RemoteException, SQLException, CajeroNotFoundException {
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Eliminando cajero");
+		
+		try {
+			Thread.sleep(30000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		Statement statement = conn.createStatement();
 		String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
 		query = String.format(query, id, Rol.CAJERO);
@@ -393,6 +427,31 @@ public class Servidor implements InterfazServidor {
 		if(rowsAffected == 0) {
 			throw new CajeroNotFoundException(id);
 		}
+		releaseMutex();
 	}
 	
+	@Override
+	public synchronized boolean requestMutex() {
+		if(inUse) {
+			return false;
+		}
+		inUse = true;
+		return true;
+		
+	}
+
+	@Override
+	public void releaseMutex() {
+		inUse = false;
+	}
+	
+	public void sleep() {
+		try {
+			System.out.println("Servidor ocupado, por favor espere...");
+			Thread.sleep(retryTime);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
 }

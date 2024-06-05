@@ -6,16 +6,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Scanner;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-
-
 import Common.APIDownException;
 import Common.Boleta;
 import Common.BoletaNotFoundException;
@@ -37,40 +27,11 @@ public class Administrador {
 		this.scanner = scanner;
 		this.servidor = servidor;
 	}
-
-
-	private void threadRun(Callable<Void> callable) throws Exception {
-		ExecutorService executor = Executors.newSingleThreadExecutor();
-		Future<?> future = executor.submit(() -> {
-				try {
-					callable.call();
-				} catch (Exception e) {
-					System.out.println("[ThreadRun]" + e.getMessage());
-				}
-		});
-		try {
-			if (!future.isDone()) {
-				future.get(1, TimeUnit.SECONDS);
-			}
-		} catch (TimeoutException e ) {
-			System.out.println("Espere por favor..\n");
-			future.get();
-		} catch (InterruptedException | ExecutionException e) {
-			System.out.println("Ocurrió un error con el servidor\n");
-		} finally {
-			executor.shutdownNow();
-		}
-
-	}
 	
 	public void agregarStock(int id, int cantidad)  {
 		try {
-			threadRun( () -> {
-			servidor.acquireMutex();
+			System.out.println("Iniciando solicitud para agregar stock...\n");
 			servidor.agregarStock(id, cantidad);
-			servidor.releaseMutex();
-			return null;
-			});
 			System.out.println("Stock actualizado con éxito\n");
 		} catch (RemoteException e) {
 			System.out.println("Ocurrió un error en la conexión con el servidor\n");
@@ -85,12 +46,8 @@ public class Administrador {
 	
 	public void eliminarStock(int id, int cantidad)  {
 		try {
-			threadRun(() -> {
-				servidor.acquireMutex();
-				servidor.eliminarStock(id, cantidad);
-				servidor.releaseMutex();
-				return null;
-			});
+			System.out.println("Iniciando solicitud para eliminar stock...\n");
+			servidor.eliminarStock(id, cantidad);
 			System.out.println("Stock actualizado con éxito\n");
 		} catch (RemoteException e) {
 			System.out.println("Ocurrió un error en la conexión con el servidor\n");
@@ -105,6 +62,7 @@ public class Administrador {
 	
 	public void consultarStock(int id) {
 		try {
+			System.out.println("Iniciando solicitud para consultar stock...\n");
 			int stock = servidor.obtenerStock(id);
 			Item item = servidor.obtenerItem(id);
 			
@@ -125,6 +83,7 @@ public class Administrador {
 	
 	public void consultarBoleta(int id) {
 		try {
+			System.out.println("Iniciando solicitud para obtener boleta...\n");
 			Boleta boleta = servidor.obtenerBoleta(id);
 			System.out.println("\nDatos de boleta con ID " + id);
 			Iterator<ItemBoleta> it = boleta.getItems();
@@ -150,6 +109,7 @@ public class Administrador {
 	
 	public void mostrarCajeros() {
 		try {
+			System.out.println("Iniciando solicitud para obtener cajeros...\n");
 			ArrayList<Usuario> cajeros = servidor.obtenerCajeros();
 			if (cajeros.size() == 0) {
 				System.out.println("No hay cajeros registrados\n");
@@ -170,6 +130,7 @@ public class Administrador {
 	
 	public void agregarCajero(String nombre, int clave) {
 		try {
+			System.out.println("Iniciando solicitud para agregar cajero...\n");
 			servidor.agregarCajero(nombre, clave);
 			System.out.println(String.format("Cajero agregado con éxito\n"));
 		} catch(Exception e) {
@@ -179,6 +140,7 @@ public class Administrador {
 	
 	public void eliminarCajero(int id) {
 		try {
+			System.out.println("Iniciando solicitud para eliminar cajero...\n");
 			servidor.eliminarCajero(id);
 			System.out.println(String.format("Cajero con ID %d eliminado con éxito\n", id));
 		} catch (Exception e) {

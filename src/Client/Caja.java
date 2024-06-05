@@ -4,13 +4,6 @@ import java.rmi.RemoteException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import Common.APIDownException;
 import Common.Colors;
@@ -31,31 +24,6 @@ public class Caja {
 		this.scanner = scanner;
 		this.servidor = servidor;
 		this.carrito = new ArrayList<>();
-	}
-
-	private void threadRun(Callable<Void> callable) throws Exception {
-		ExecutorService executor = Executors.newSingleThreadExecutor();
-		Future<?> future = executor.submit(() -> {
-			try {
-				callable.call();
-			} catch (Exception e) {
-				System.out.println("Ocurrió un error con el servidor\n");
-				System.out.println(e.getMessage());
-			}
-		});
-		try {
-			if (!future.isDone()) {
-				future.get(1, TimeUnit.SECONDS);
-			}
-		} catch (TimeoutException e) {
-			System.out.println("Espere por favor..\n");
-			future.get();
-			} catch (InterruptedException | ExecutionException e) {
-				System.out.println("Ocurrió un error con el servidor\n");
-		} finally {
-			executor.shutdownNow();
-		}
-
 	}
 	
 	public void agregarItem(int id, int cantidad) {
@@ -147,22 +115,12 @@ public class Caja {
 		}
 		
 		try {
-			threadRun(() -> {
-				servidor.acquireMutex();
-				int idBoleta = servidor.generarBoleta(carrito, usuario.getNombre());
-				carrito = new ArrayList<>();
-				System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
-				System.out.println("¡Gracias por comprar!\n");
-				return null;
-			});
+			int idBoleta = servidor.generarBoleta(carrito, usuario.getNombre());
+			carrito = new ArrayList<>();
+			System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
+			System.out.println("¡Gracias por comprar!\n");
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
-		} finally {
-			try {
-				servidor.releaseMutex();
-			} catch (RemoteException e) {
-				System.out.println("Ocurrió un error al liberar el mutex\n");
-			}
 		}
 	}
 
