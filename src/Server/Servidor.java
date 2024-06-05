@@ -196,6 +196,7 @@ public class Servidor implements InterfazServidor {
 	
 	public void agregarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException {
 		try {
+			acquireMutex();
 			Statement statement = conn.createStatement();
 			String query = "UPDATE stock SET stock = stock + %d WHERE idProducto = %d";
 			query = String.format(query, cantidad, id);
@@ -206,11 +207,18 @@ public class Servidor implements InterfazServidor {
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException("Error al agregar stock");
+		}finally {
+			try {
+				releaseMutex();
+			} catch (RemoteException e) {
+				System.out.println("Ocurrió un error al liberar el mutex\n");
+			}
 		}
 	}
 	
 	public void eliminarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException {
 		try {
+			acquireMutex();
 			Statement statement = conn.createStatement();
 			String query = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
 			query = String.format(query, cantidad, id);
@@ -222,6 +230,12 @@ public class Servidor implements InterfazServidor {
 
 		} catch (SQLException e) {
 			throw new RuntimeException("Error al eliminar stock");
+		}finally {
+			try {
+				releaseMutex();
+			} catch (RemoteException e) {
+				System.out.println("Ocurrió un error al liberar el mutex\n");
+			}
 		}
 	}
 	
@@ -376,22 +390,44 @@ public class Servidor implements InterfazServidor {
 
 	@Override
 	public void agregarCajero(String nombre, int clave) throws RemoteException, SQLException {
-		Statement statement = conn.createStatement();
-		String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
-		query = String.format(query, nombre, clave, Rol.CAJERO);
-		
-		statement.executeUpdate(query);
+		try {
+			acquireMutex();
+			Statement statement = conn.createStatement();
+			String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
+			query = String.format(query, nombre, clave, Rol.CAJERO);
+			
+			statement.executeUpdate(query);
+		}catch(Exception e) {
+			System.out.println(e.getMessage());
+		}finally {
+			try {
+				releaseMutex();
+			} catch (RemoteException e) {
+				System.out.println("Ocurrió un error al liberar el mutex\n");
+			}
+		}
 	}
 
 	@Override
 	public void eliminarCajero(int id) throws RemoteException, SQLException, CajeroNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
-		query = String.format(query, id, Rol.CAJERO);
-		
-		int rowsAffected = statement.executeUpdate(query);
-		if(rowsAffected == 0) {
-			throw new CajeroNotFoundException(id);
+		try {
+			acquireMutex();
+			Statement statement = conn.createStatement();
+			String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
+			query = String.format(query, id, Rol.CAJERO);
+			
+			int rowsAffected = statement.executeUpdate(query);
+			if(rowsAffected == 0) {
+				throw new CajeroNotFoundException(id);
+			}
+		}catch(Exception e) {
+			System.out.println(e.getMessage());
+		}finally {
+			try {
+				releaseMutex();
+			} catch (RemoteException e) {
+				System.out.println("Ocurrió un error al liberar el mutex\n");
+			}
 		}
 	}
 	
