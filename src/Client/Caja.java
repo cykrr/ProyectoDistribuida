@@ -1,12 +1,9 @@
 package Client;
 
-import java.rmi.RemoteException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 import Common.APIDownException;
-import Common.Colors;
 import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemCarrito;
@@ -26,7 +23,7 @@ public class Caja {
 		this.carrito = new ArrayList<>();
 	}
 	
-	public void agregarItem(int id, int cantidad) {
+	public void agregarItem(int id, int cantidad) throws Exception {
 		for (ItemCarrito elemento : carrito) {
 			if(elemento.getItem().getId() == id) {
 				elemento.setCantidad(elemento.getCantidad() + cantidad);
@@ -41,10 +38,6 @@ public class Caja {
 			carrito.add(itemCarrito);
 			System.out.println("Se agregaron " + cantidad + " x " + item.getNombre() + "\n");
 			
-		} catch (RemoteException e) {
-			System.out.println("No se pudo agregar el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("Ocurrió un error con la base de datos\n");
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API\n");
 		} catch (ProductNotFoundException e) {
@@ -52,7 +45,7 @@ public class Caja {
 		} 
 	}
 	
-	public void consultarItem(int id) {
+	public void consultarItem(int id) throws Exception {
 		try {
 			Item item = servidor.obtenerItem(id);
 			System.out.println("Nombre: " + item.getNombre());
@@ -64,17 +57,11 @@ public class Caja {
 				System.out.println("Promoción: " + item.getCantidadPack() + " x $" + item.getPrecioPack());
 			}
 			System.out.println();
-		} catch (SQLException e) {
-			System.out.println("Ocurrió un error con la base de datos\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
 		} catch (APIDownException e) {
 			System.out.println("No se pudo establecer conexión con la API\n");
-		} catch (RemoteException e) {
-			System.out.println("No se pudo obtener el item con ID " + id + "\n");
-		} catch (RuntimeException e) {
-			System.out.println(Colors.ANSI_RED + e.getMessage() + Colors.ANSI_RESET);
-		}
+		} 
 	}
 	
 	public void eliminarItem(int idProducto, int cantidad){
@@ -107,24 +94,20 @@ public class Caja {
 		}
 	}
 	
-	public void finalizarVenta() {
+	public void finalizarVenta() throws Exception {
 		if (carrito.size() == 0) {
 			System.out.println("El carrito no puede quedar vacío!");
 			System.out.println("Por favor, agrega algunos productos.\n");
 			return;
 		}
 		
-		try {
-			int idBoleta = servidor.generarBoleta(carrito, usuario.getNombre());
-			carrito = new ArrayList<>();
-			System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
-			System.out.println("¡Gracias por comprar!\n");
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
-		}
+		int idBoleta = servidor.generarBoleta(carrito, usuario.getNombre());
+		carrito = new ArrayList<>();
+		System.out.println("Boleta con ID " + idBoleta + " generada con éxito");
+		System.out.println("¡Gracias por comprar!\n");
 	}
 
-	public void mostrarMenu() {
+	public void mostrarMenu() throws Exception {
 		int opcion;
 		
 		do {

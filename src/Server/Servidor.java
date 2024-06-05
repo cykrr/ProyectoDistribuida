@@ -386,10 +386,10 @@ public class Servidor implements InterfazServidor {
 		}
 		System.out.println("Agregando cajero...");
 		
+		// Para testear mutex
 		try {
 			Thread.sleep(10000);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -410,24 +410,21 @@ public class Servidor implements InterfazServidor {
 		while(!requestMutex()) {
 			sleep();
 		}
-		System.out.println("Eliminando cajero");
 		
 		try {
-			Thread.sleep(30000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Eliminando cajero");
+			
+			Statement statement = conn.createStatement();
+			String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
+			query = String.format(query, id, Rol.CAJERO);
+			
+			int rowsAffected = statement.executeUpdate(query);
+			if(rowsAffected == 0) {
+				throw new CajeroNotFoundException(id);
+			}
+		} finally {
+			releaseMutex();
 		}
-		
-		Statement statement = conn.createStatement();
-		String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
-		query = String.format(query, id, Rol.CAJERO);
-		
-		int rowsAffected = statement.executeUpdate(query);
-		if(rowsAffected == 0) {
-			throw new CajeroNotFoundException(id);
-		}
-		releaseMutex();
 	}
 	
 	@Override

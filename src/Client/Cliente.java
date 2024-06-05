@@ -3,7 +3,6 @@ package Client;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
-import java.sql.SQLException;
 import java.util.Scanner;
 
 import Common.InterfazServidor;
@@ -14,32 +13,33 @@ import Common.Usuario;
 
 public class Cliente {
 	private Scanner scanner;
+	private Usuario usuario;
 	Registry r = null;
 	InterfazServidor servidor = null;
 	Logger logger = new Logger(this.getClass().getSimpleName());
 	
 	public Cliente() {
-
+		
 		try {
 			r = java.rmi.registry.LocateRegistry.getRegistry("localhost", 1099);
 			servidor = (InterfazServidor) r.lookup("Servidor");
 		} catch (RemoteException e) {
 			logger.error("No se pudo conectar con el servidor principal: " + e.getMessage());
-			connectToBackupServer(r);
+			connectToBackupServer();
 		} catch (NotBoundException e) {
 			logger.error("No se encontró 'Servidor' en el Registro");
-			connectToBackupServer(r);
+			connectToBackupServer();
 		}
 		logger.log("Conectado al servidor");
 
 		scanner = new Scanner(System.in);
-		startClient();
 	}
 
-	public void connectToBackupServer(Registry r) {
+	public boolean connectToBackupServer() {
 		try {
 			r = java.rmi.registry.LocateRegistry.getRegistry("localhost", 1100);
 			servidor = (InterfazServidor) r.lookup("ServidorRespaldo");
+			return true;
 		} catch (RemoteException e) {
 			logger.error("No se pudo conectar con el servidor de respaldo");
 			System.exit(1);
@@ -48,6 +48,7 @@ public class Cliente {
 			System.exit(1);
 		}
 		logger.log("Servidor de respaldo encontrado");
+		return false;
 	}
 
 	
@@ -65,30 +66,29 @@ public class Cliente {
 			
 			switch (opcion) {
 				case 1:
-					iniciarSesion();
+					System.out.print("Ingrese id: ");
+					int id = scanner.nextInt();
+					
+					System.out.print("Ingrese clave: ");
+					int clave = scanner.nextInt();
+					
+					iniciarSesion(id, clave);
 					break;
 				case 2:
 					break;
 				default:
 					System.out.println("Opción inválida\n");
 			}
-					
+
 		} while(opcion != 2);
 		
 		System.out.println("Saliendo...");
-		scanner.close();
-
 	}
 	
-	private void iniciarSesion() {	
-		System.out.print("Ingrese id: ");
-		int id = scanner.nextInt();
-		
-		System.out.print("Ingrese clave: ");
-		int clave = scanner.nextInt();
-		
+	private void iniciarSesion(int id, int clave) {
 		try {
-			Usuario usuario = servidor.logIn(id, clave);
+			usuario = servidor.logIn(id, clave);
+			
 			if (usuario == null) {
 				System.out.println("Credenciales incorrectas\n");
 				return;
@@ -102,10 +102,11 @@ public class Cliente {
 				Administrador administrador = new Administrador(usuario, servidor, scanner);
 				administrador.mostrarMenu();
 			}
-		} catch (RemoteException e) {
-			System.out.println("Ocurrió un error con el servidor\n");
-		} catch (SQLException e) {
-			System.out.println("Ocurrió un error con la base de datos\n");
+		} catch (Exception e) {
+			System.out.println(e.getMessage() + "\n");
+			if (connectToBackupServer()) {
+				iniciarSesion(usuario.getId(), usuario.getClave());
+			}
 		}
 	}
 	
