@@ -1,4 +1,5 @@
 package Server;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -31,6 +32,7 @@ import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemBoleta;
 import Common.ItemCarrito;
+import Common.Logger;
 import Common.ProductNotFoundException;
 import Common.Rol;
 import Common.StockMismatchException;
@@ -39,29 +41,33 @@ import Common.Usuario;
 public class Servidor implements InterfazServidor {
 	private static String apiUrlString = "http://localhost:5000";
 	private Connection conn;
+	private Logger logger;
+	private boolean inUse;
+	private int retryTime = 1000;
 
 	public Servidor() throws IOException {
+		logger = new Logger("Servidor");
 		UnicastRemoteObject.exportObject(this, 0);
-		
+
 		try {
 			conn = createConnection();
 			crearBD(conn);
 		} catch (Exception e) {
-			System.err.println("Error: " + e.getMessage());
+			logger.error(e.getMessage());
 			return;
 		}
-		
+
 		// test connection to API
 		try {
 			obtenerItem(1);
 		} catch (APIDownException e) {
-			System.err.println("API is down. Server will not be able to function properly.");
+			logger.warning("API is down. Server will not be able to function properly.");
 		}
 	}
-	
+
 	private void crearBD(Connection conn) throws Exception {
 		String queries;
-		
+
 		String path = "src/Server/db.sql";
 		try {
 			queries = readFile(path);
@@ -69,78 +75,85 @@ public class Servidor implements InterfazServidor {
 			System.out.println("Error al leer archivo " + path + ".\nNo se pudo crear la base de datos.");
 			throw e;
 		}
-		
+
 		String[] queriesArray = queries.split(";");
-		
-        for (int i = 0; i < queriesArray.length; i++) {
-            queriesArray[i] = queriesArray[i].trim();
-        }
-		
-        for (String query : queriesArray) {
-        	try {
+
+		for (int i = 0; i < queriesArray.length; i++) {
+			queriesArray[i] = queriesArray[i].trim();
+		}
+
+		for (String query : queriesArray) {
+			try {
 				Statement statement = conn.createStatement();
 				statement.executeQuery(query);
 			} catch (SQLException e) {
-				System.out.println("Error al ejecutar sentencia " + query);
+				logger.error("Error al ejecutar sentencia " + query);
 				throw e;
 			}
-        }
-		
+		}
+
 	}
 	
 	public Boleta obtenerBoleta(int idBoleta) throws RemoteException, BoletaNotFoundException, SQLException, APIDownException {
+		System.out.println("Obteniendo boleta...");
 		String query = "SELECT nombreCajero, itemsBoleta.idProducto, itemsBoleta.precioTotal, itemsBoleta.cantidad "
 				+ "FROM itemsBoleta JOIN boletas USING(idBoleta) WHERE idBoleta = %d";
 		query = String.format(query, idBoleta);
-		
+
 		Statement statement = conn.createStatement();
 		ResultSet data = statement.executeQuery(query);
-		
+
 		if (!data.next()) {
 			throw new BoletaNotFoundException(idBoleta);
 		}
-		
+
 		String nombreCajero = data.getString("nombreCajero");
 		Boleta boleta = new Boleta(nombreCajero);
-		
+
 		do {
 			int idProducto = data.getInt("idProducto");
 			int precioTotal = data.getInt("precioTotal");
 			int cantidad = data.getInt("cantidad");
-			
+
 			Item item = obtenerItem(idProducto);
 			String nombreProducto = item.getNombre();
-			
+
 			ItemBoleta itemBoleta = new ItemBoleta(idProducto, nombreProducto, precioTotal, cantidad);
 			boleta.agregarItem(itemBoleta);
-		} while(data.next());
-		
+		} while (data.next());
+
+		System.out.println("Boleta obtenida con éxito");
 		return boleta;
 	}
-	
+
 	public int generarBoleta(ArrayList<ItemCarrito> itemsCarrito, String nombreCajero) throws RemoteException, SQLException {
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Generando boleta...");
+		
 		try {
 			// Empezar transacción
 			conn.setAutoCommit(false);
-			
+
 			// Crear idBoleta y asignar a idCajero
 			String query = "INSERT INTO boletas(nombreCajero) VALUES ('%s')";
 			query = String.format(query, nombreCajero);
-			
+
 			PreparedStatement pstatement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 			pstatement.executeUpdate();
 
 			ResultSet data = pstatement.getGeneratedKeys();
 			data.next();
 			int idBoleta = data.getInt(1);
-			
+
 			// Insertar items a la boleta
 			Statement statement = conn.createStatement();
 			String queryItem = "INSERT INTO itemsBoleta(idBoleta, idProducto, precioTotal, cantidad) VALUES (%d, %d, %d, %d)";
 			String queryStock = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
 			String currentQuery;
-			
-			for(int i = 0; i < itemsCarrito.size(); i++) {
+
+			for (int i = 0; i < itemsCarrito.size(); i++) {
 				ItemCarrito itemCarrito = itemsCarrito.get(i);
 				Item item = itemCarrito.getItem();
 				int stock = obtenerStock(item.getId());
@@ -148,66 +161,86 @@ public class Servidor implements InterfazServidor {
 					throw new StockMismatchException(item.getId(), stock);
 				}
 
-				int cantidad = itemCarrito.getCantidad();		
+				int cantidad = itemCarrito.getCantidad();
 				int precioTotal = itemCarrito.getPrecioFinal();
-				
+
 				currentQuery = String.format(queryItem, idBoleta, item.getId(), precioTotal, cantidad);
 				statement.executeQuery(currentQuery);
-				
+
 				// Actualizar stock
 				currentQuery = String.format(queryStock, cantidad, item.getId());
 				statement.executeUpdate(currentQuery);
 			}
-			
+
 			// Finalizar transacción
 			conn.commit();
 			return idBoleta;
-		}
-		catch(Exception e) {
+		} catch (Exception e) {
 			conn.rollback(); // Si algo falla, descartar cambios.
 			System.err.println(e);
 			throw new SQLException("Error al generar boleta. Se ha hecho rollback.");
-		}
-		finally {
+		} finally {
 			conn.setAutoCommit(true);
+			releaseMutex();
 		}
 	}
 	
-	public int obtenerStock(int id) throws SQLException, ProductNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "SELECT stock FROM stock WHERE idProducto = %d";
-		query = String.format(query,  id);
+	public int obtenerStock(int id) throws ProductNotFoundException, SQLException {
+		System.out.println("Obteniendo stock...");
 		
-		ResultSet data = statement.executeQuery(query);
+		PreparedStatement statement = conn.prepareStatement("SELECT stock FROM stock WHERE idProducto = ?");
+		statement.setInt(1, id);
+		ResultSet data = statement.executeQuery();
+		
 		if (!data.next()) {
 			throw new ProductNotFoundException(id);
 		}
 		return data.getInt("stock");
 	}
 	
-	public void agregarStock(int id, int cantidad) throws RemoteException, SQLException, ProductNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "UPDATE stock SET stock = stock + %d WHERE idProducto = %d";
-		query = String.format(query, cantidad, id);
+	public void agregarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException, SQLException {
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Agregando stock...");
 		
-		int rowCount = statement.executeUpdate(query);
-		if (rowCount == 0) {
-			throw new ProductNotFoundException(id);
+		try {
+			Statement statement = conn.createStatement();
+			String query = "UPDATE stock SET stock = stock + %d WHERE idProducto = %d";
+			query = String.format(query, cantidad, id);
+			
+			int rowCount = statement.executeUpdate(query);
+			if (rowCount == 0) {
+				throw new ProductNotFoundException(id);
+			}
+		} finally {
+			releaseMutex();
 		}
 	}
 	
-	public void eliminarStock(int id, int cantidad) throws RemoteException, SQLException, ProductNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
-		query = String.format(query, cantidad, id);
+	public void eliminarStock(int id, int cantidad) throws RemoteException, ProductNotFoundException, SQLException {
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Eliminando stock...");
 		
-		int rowCount = statement.executeUpdate(query);
-		if (rowCount == 0) {
-			throw new ProductNotFoundException(id);
+		try {
+			Statement statement = conn.createStatement();
+			String query = "UPDATE stock SET stock = stock - %d WHERE idProducto = %d";
+			query = String.format(query, cantidad, id);
+			
+			int rowCount = statement.executeUpdate(query);
+			if (rowCount == 0) {
+				throw new ProductNotFoundException(id);
+			}
+
+		} finally {
+			releaseMutex();
 		}
 	}
 	
 	public Item obtenerItem(int idProducto) throws APIDownException, ProductNotFoundException {
+		System.out.println("Obteniendo producto...");
 		Map<String, String> params = new HashMap<>();
 		params.put("id", Integer.toString(idProducto));
 		HttpURLConnection conn = establishConnection("products" +  ParameterStringBuilder.getParamsString(params));
@@ -250,7 +283,6 @@ public class Servidor implements InterfazServidor {
 			conn.disconnect();
 		}
 
-
 	}
 
 	private HttpURLConnection establishConnection(String path) {
@@ -264,7 +296,7 @@ public class Servidor implements InterfazServidor {
 			return conn;
 		} catch (URISyntaxException | IOException e) {
 			e.printStackTrace();
-			System.err.println("Error al crear la conexion a la API (URL malformada)");
+			logger.error("Error al crear la conexion a la API (URL malformada)");
 		}
 		return null;
 	}
@@ -278,7 +310,7 @@ public class Servidor implements InterfazServidor {
 		try {
 			conn = java.sql.DriverManager.getConnection("jdbc:mariadb://localhost:3306/", connectionProps);
 		} catch (SQLException e) {
-			System.err.println("Error al conectar a la base de datos");
+			logger.error("Error al conectar a la base de datos");
 			throw e;
 		}
 		return conn;
@@ -304,6 +336,7 @@ public class Servidor implements InterfazServidor {
 
 	@Override
 	public Usuario logIn(int id, int clave) throws RemoteException {
+		System.out.println("Intento de inicio de sesión con ID " + id);
 		String query = String.format("SELECT idUsuario, nombre, rol FROM usuarios WHERE idUsuario = %d AND clave = %d", id, clave);
 
 		try {
@@ -316,6 +349,7 @@ public class Servidor implements InterfazServidor {
 
 			int rol = data.getInt("rol");
 			String nombre = data.getString("nombre");
+			System.out.println("Sesión iniciada para el usuario " + id);
 			return new Usuario(id, nombre, clave, rol);
 
 		} catch (SQLException e) {
@@ -327,6 +361,7 @@ public class Servidor implements InterfazServidor {
 
 	@Override
 	public ArrayList<Usuario> obtenerCajeros() throws RemoteException, SQLException {
+		System.out.println("Obteniendo cajeros...");
 		Statement statement = conn.createStatement();
 		String query = "SELECT idUsuario, nombre, clave FROM usuarios WHERE rol = %d";
 		query = String.format(query, Rol.CAJERO);
@@ -340,30 +375,80 @@ public class Servidor implements InterfazServidor {
 			
 			Usuario usuario = new Usuario(id, nombre, clave, Rol.CAJERO);
 			cajeros.add(usuario);
-			
 		}
 		return cajeros;
 	}
 
 	@Override
 	public void agregarCajero(String nombre, int clave) throws RemoteException, SQLException {
-		Statement statement = conn.createStatement();
-		String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
-		query = String.format(query, nombre, clave, Rol.CAJERO);
+		while(!requestMutex()) {
+			sleep();
+		}
+		System.out.println("Agregando cajero...");
 		
-		statement.executeUpdate(query);
+		// Para testear mutex
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			Statement statement = conn.createStatement();
+			String query = "INSERT INTO usuarios(nombre, clave, rol) VALUES ('%s', %d, %d)";
+			query = String.format(query, nombre, clave, Rol.CAJERO);
+			
+			statement.executeUpdate(query);
+			System.out.println("Cajero agregado con éxito");
+		} finally {
+			releaseMutex();
+		}
 	}
 
 	@Override
 	public void eliminarCajero(int id) throws RemoteException, SQLException, CajeroNotFoundException {
-		Statement statement = conn.createStatement();
-		String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
-		query = String.format(query, id, Rol.CAJERO);
+		while(!requestMutex()) {
+			sleep();
+		}
 		
-		int rowsAffected = statement.executeUpdate(query);
-		if(rowsAffected == 0) {
-			throw new CajeroNotFoundException(id);
+		try {
+			System.out.println("Eliminando cajero");
+			
+			Statement statement = conn.createStatement();
+			String query = "DELETE FROM usuarios WHERE idUsuario = %d AND rol = %d";
+			query = String.format(query, id, Rol.CAJERO);
+			
+			int rowsAffected = statement.executeUpdate(query);
+			if(rowsAffected == 0) {
+				throw new CajeroNotFoundException(id);
+			}
+		} finally {
+			releaseMutex();
 		}
 	}
 	
+	@Override
+	public synchronized boolean requestMutex() {
+		if(inUse) {
+			return false;
+		}
+		inUse = true;
+		return true;
+		
+	}
+
+	@Override
+	public void releaseMutex() {
+		inUse = false;
+	}
+	
+	public void sleep() {
+		try {
+			System.out.println("Servidor ocupado, por favor espere...");
+			Thread.sleep(retryTime);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
 }

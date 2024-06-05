@@ -1,7 +1,5 @@
 package Client;
 
-import java.rmi.RemoteException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Scanner;
@@ -9,11 +7,13 @@ import java.util.Scanner;
 import Common.APIDownException;
 import Common.Boleta;
 import Common.BoletaNotFoundException;
+import Common.CajeroNotFoundException;
 import Common.InterfazServidor;
 import Common.Item;
 import Common.ItemBoleta;
 import Common.ProductNotFoundException;
 import Common.Usuario;
+
 
 public class Administrador {
 	private Usuario usuario;
@@ -26,52 +26,42 @@ public class Administrador {
 		this.servidor = servidor;
 	}
 	
-	public void agregarStock(int id, int cantidad) {
+	public void agregarStock(int id, int cantidad) throws Exception {
 		try {
+			System.out.println("Iniciando solicitud para agregar stock...\n");
 			servidor.agregarStock(id, cantidad);
 			System.out.println("Stock actualizado con éxito\n");
-		} catch (RemoteException e) {
-			System.out.println("Ocurrió un error en la conexión con el servidor\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
 		}
 	}
 	
-	public void eliminarStock(int id, int cantidad) {
+	public void eliminarStock(int id, int cantidad) throws Exception  {
 		try {
+			System.out.println("Iniciando solicitud para eliminar stock...\n");
 			servidor.eliminarStock(id, cantidad);
 			System.out.println("Stock actualizado con éxito\n");
-		} catch (RemoteException e) {
-			System.out.println("Ocurrió un error en la conexión con el servidor\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
 		}
 	}
 	
-	public void consultarStock(int id) {
+	public void consultarStock(int id) throws Exception {
 		try {
+			System.out.println("Iniciando solicitud para consultar stock...\n");
 			int stock = servidor.obtenerStock(id);
 			Item item = servidor.obtenerItem(id);
 			
 			System.out.println("Producto: " + item.getNombre());
 			System.out.println("Stock: " + stock + "\n");
-		} catch (RemoteException e) {
-			System.out.println("Ocurrió un error en la conexión con el servidor\n");
 		} catch (ProductNotFoundException e) {
 			System.out.println("No se encontró el item con ID " + id + "\n");
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
-		} catch (APIDownException e) {
-			System.out.println("No se pudo establecer conexión con la API\n");
 		}
 	}
 	
-	public void consultarBoleta(int id) {
+	public void consultarBoleta(int id) throws Exception {
 		try {
+			System.out.println("Iniciando solicitud para obtener boleta...\n");
 			Boleta boleta = servidor.obtenerBoleta(id);
 			System.out.println("\nDatos de boleta con ID " + id);
 			Iterator<ItemBoleta> it = boleta.getItems();
@@ -81,11 +71,6 @@ public class Administrador {
 			}
 			System.out.println("Total a pagar: $" + boleta.calcularPrecioFinal());
 			System.out.println("Nombre cajero: " + boleta.getNombreCajero() + "\n");
-		} catch (RemoteException e) {
-			System.out.println("Ocurrió un error en la conexión con el servidor\n");
-			e.printStackTrace();
-		} catch (SQLException e) {
-			System.out.println("No se pudo establecer conexión con la base de datos\n");
 		} catch (BoletaNotFoundException e) {
 			System.out.println("No se encontró la boleta con ID " + id + "\n");
 		} catch (APIDownException e) {
@@ -93,45 +78,40 @@ public class Administrador {
 		}
 	}
 	
-	public void mostrarCajeros() {
-		try {
-			ArrayList<Usuario> cajeros = servidor.obtenerCajeros();
-			if (cajeros.size() == 0) {
-				System.out.println("No hay cajeros registrados\n");
-				return;
-			}
-			
-			System.out.println(String.format("Mostrando datos para %d cajeros registrados\n", cajeros.size()));
-			System.out.println(String.format("%-10s %-20s %s", "ID", "Nombre", "Clave"));
-			for(int i = 0; i < cajeros.size(); i++) {
-				Usuario cajero = cajeros.get(i);
-				System.out.println(String.format("%-10d %-20s %d", cajero.getId(), cajero.getNombre(), cajero.getClave()));
-			}
-			System.out.println();
-		} catch (Exception e) {
-			System.out.println(e.getMessage() + "\n");
+	public void mostrarCajeros() throws Exception {
+		System.out.println("Iniciando solicitud para obtener cajeros...\n");
+		ArrayList<Usuario> cajeros = servidor.obtenerCajeros();
+		if (cajeros.size() == 0) {
+			System.out.println("No hay cajeros registrados\n");
+			return;
 		}
+		
+		System.out.println(String.format("Mostrando datos para %d cajeros registrados\n", cajeros.size()));
+		System.out.println(String.format("%-10s %-20s %s", "ID", "Nombre", "Clave"));
+		for(int i = 0; i < cajeros.size(); i++) {
+			Usuario cajero = cajeros.get(i);
+			System.out.println(String.format("%-10d %-20s %d", cajero.getId(), cajero.getNombre(), cajero.getClave()));
+		}
+		System.out.println();
 	}
 	
-	public void agregarCajero(String nombre, int clave) {
-		try {
-			servidor.agregarCajero(nombre, clave);
-			System.out.println(String.format("Cajero agregado con éxito\n"));
-		} catch(Exception e) {
-			System.out.println(e.getMessage() + "\n");
-		}
+	public void agregarCajero(String nombre, int clave) throws Exception {
+		System.out.println("Iniciando solicitud para agregar cajero...\n");
+		servidor.agregarCajero(nombre, clave);
+		System.out.println(String.format("Cajero agregado con éxito\n"));
 	}
 	
-	public void eliminarCajero(int id) {
+	public void eliminarCajero(int id) throws Exception {
 		try {
+			System.out.println("Iniciando solicitud para eliminar cajero...\n");
 			servidor.eliminarCajero(id);
 			System.out.println(String.format("Cajero con ID %d eliminado con éxito\n", id));
-		} catch (Exception e) {
-			System.out.println(e.getMessage() + "\n");
+		} catch (CajeroNotFoundException e) {
+			System.out.println("No se encontró el cajero con ID " + id + "\n");
 		}
 	}
 
-	public void mostrarMenu() {
+	public void mostrarMenu() throws Exception {
 		int opcion;
 		
 		do {
