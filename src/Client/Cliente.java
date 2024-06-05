@@ -39,6 +39,7 @@ public class Cliente {
 		try {
 			r = java.rmi.registry.LocateRegistry.getRegistry("localhost", 1100);
 			servidor = (InterfazServidor) r.lookup("ServidorRespaldo");
+			logger.log("Servidor de respaldo encontrado");
 			return true;
 		} catch (RemoteException e) {
 			logger.error("No se pudo conectar con el servidor de respaldo");
@@ -47,7 +48,6 @@ public class Cliente {
 			logger.error("No se encontró 'ServidorRespaldo' en el Registro");
 			System.exit(1);
 		}
-		logger.log("Servidor de respaldo encontrado");
 		return false;
 	}
 
@@ -104,7 +104,7 @@ public class Cliente {
 			}
 		} catch (Exception e) {
 			System.out.println(e.getMessage() + "\n");
-			if (connectToBackupServer()) {
+			if (connectToBackupServer() && usuario != null) {
 				iniciarSesion(usuario.getId(), usuario.getClave());
 			}
 		}
